@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    @apply antialiased bg-background text-slate-900 font-sans tracking-tight min-h-screen overflow-x-hidden;
+  }
+
+  h1 { @apply text-[24px] font-bold leading-[1.2]; }
+  h2 { @apply text-[20px] font-bold leading-[1.3]; }
+  h3 { @apply text-[18px] font-medium leading-[1.4]; }
+  h4 { @apply text-[16px] font-medium leading-[1.4]; }
+}
+
+@layer components {
+  .input-field {
+    @apply w-full h-[48px] rounded-input border border-slate-200 bg-surface px-4 py-3 text-sm text-slate-900 
+           transition-all duration-200
+           focus:border-primary focus:outline-none focus:ring-0
+           placeholder:text-slate-400;
+  }
+
+  .btn-primary {
+    @apply h-[48px] px-8 rounded-input bg-primary text-white text-sm font-semibold 
+           transition-all duration-200 
+           hover:bg-primary-dark active:scale-[0.98] 
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-secondary {
+    @apply h-[48px] px-6 rounded-input border border-slate-200 bg-surface text-sm font-semibold text-slate-500
+           transition-all duration-200 
+           hover:bg-slate-100 active:scale-[0.98];
+  }
+
+  .system-card {
+    @apply bg-surface border border-slate-200 rounded-system shadow-system overflow-hidden;
+  }
+
+  .table-header-label {
+    @apply px-6 py-4 border-b-2 border-slate-200 text-xs-label text-slate-500 uppercase;
+  }
+
+  .status-badge {
+    @apply px-3 py-1 rounded-full text-[11px] font-bold uppercase;
+  }
+
+  .status-ok { @apply bg-success/20 text-success; }
+  .status-low { @apply bg-warning/20 text-warning; }
+  .status-out { @apply bg-danger/20 text-danger; }
+}
