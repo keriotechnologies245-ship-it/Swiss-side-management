@@ -25,66 +25,29 @@ export default function Settings() {
         <p className="text-slate-500 text-sm mt-1">Manage your profile and system preferences.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="max-w-2xl">
         {/* Profile Settings */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="system-card p-6">
-            <h3 className="text-base font-bold text-slate-800 mb-6 uppercase tracking-tight border-b pb-4">Profile Information</h3>
-            <form onSubmit={handleSave} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs-label text-slate-500 uppercase mb-2">Display Name</label>
-                  <input type="text" className="input-field" defaultValue="Manager" />
-                </div>
-                <div>
-                  <label className="block text-xs-label text-slate-500 uppercase mb-2">Role</label>
-                  <input type="text" className="input-field bg-slate-50" defaultValue="System Administrator" readOnly />
-                </div>
+        <div className="system-card p-6">
+          <h3 className="text-base font-bold text-slate-800 mb-6 uppercase tracking-tight border-b pb-4">Profile Information</h3>
+          <form onSubmit={handleSave} className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs-label text-slate-500 uppercase mb-2">Display Name</label>
+                <input type="text" className="input-field" defaultValue="Manager" />
               </div>
               <div>
-                <label className="block text-xs-label text-slate-500 uppercase mb-2">Email Address</label>
-                <input type="email" className="input-field bg-slate-50 border-slate-100" value={userEmail} readOnly />
-              </div>
-              <div className="pt-4">
-                <button type="submit" className="btn-primary">Save Profile Changes</button>
-              </div>
-            </form>
-          </div>
-
-          <div className="system-card p-6 border-danger/20">
-            <h3 className="text-base font-bold text-danger mb-6 uppercase tracking-tight border-b pb-4">Security</h3>
-            <div className="space-y-4">
-                <p className="text-sm text-slate-600">Update your access PIN for the terminal.</p>
-                <button className="btn-secondary text-danger border-danger/30 hover:bg-danger/5">Change System PIN</button>
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar info */}
-        <div className="space-y-6">
-          <div className="system-card p-6 bg-slate-50 border-slate-200">
-            <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-tight">System Info</h3>
-            <div className="space-y-4 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Version</span>
-                <span className="font-mono font-bold">1.0.0-prod</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Last Synced</span>
-                <span className="font-mono font-bold">Just now</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Supabase Connection</span>
-                <span className="text-success font-bold uppercase">Active</span>
+                <label className="block text-xs-label text-slate-500 uppercase mb-2">Role</label>
+                <input type="text" className="input-field bg-slate-50" defaultValue="System Administrator" readOnly />
               </div>
             </div>
-          </div>
-
-          <div className="system-card p-6">
-            <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-tight">Support</h3>
-            <p className="text-xs text-slate-500 leading-relaxed mb-4">Need help or found a bug? Contact the Connex Technologies engineering team.</p>
-            <button className="text-[11px] font-bold text-primary uppercase tracking-widest hover:underline">Support Ticket</button>
-          </div>
+            <div>
+              <label className="block text-xs-label text-slate-500 uppercase mb-2">Email Address</label>
+              <input type="email" className="input-field bg-slate-50 border-slate-100" value={userEmail} readOnly />
+            </div>
+            <div className="pt-4">
+              <button type="submit" className="btn-primary">Save Profile Changes</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
