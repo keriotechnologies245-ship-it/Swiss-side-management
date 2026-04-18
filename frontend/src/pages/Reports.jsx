@@ -138,131 +138,54 @@ export default function Reports() {
         <p className="text-slate-500 text-sm mt-1">Generate professional inventory manifests and audit logs for Swiss Side Iten.</p>
       </div>
 
-      {/* Report Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Daily Report */}
-        <div className="system-card p-8 group hover:border-primary transition-all cursor-pointer bg-white" onClick={() => setIsReportModalOpen(true)}>
-            <div className="w-[56px] h-[56px] rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6 transition-transform group-hover:scale-110">
-                <Calendar size={28} />
+      {/* Simplified Essential Report Section */}
+      <div className="max-w-3xl mx-auto py-12">
+        <div className="system-card p-10 bg-white border-l-8 border-l-primary shadow-xl">
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+               <FileText size={48} />
             </div>
-            <h3 className="text-slate-900 mb-2 font-bold uppercase tracking-tight">Daily Breakdown</h3>
-            <p className="text-sm text-slate-500 mb-6 leading-relaxed">Extract and view today's specific stock movements and logs.</p>
-            <button className="text-primary font-bold text-xs uppercase tracking-widest flex items-center gap-2 group-hover:gap-3 transition-all">
-                GENERATE <ArrowRight size={14} />
-            </button>
-        </div>
-
-        {/* Monthly Statement */}
-        <div className="system-card p-8 group hover:border-primary transition-all cursor-pointer bg-white" onClick={() => setIsReportModalOpen(true)}>
-            <div className="w-[56px] h-[56px] rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6 transition-transform group-hover:scale-110">
-                <FileText size={28} />
+            <div className="flex-1 text-center md:text-left">
+              <h2 className="text-2xl font-bold text-slate-900 uppercase tracking-tight mb-2">Download Official Statement</h2>
+              <p className="text-slate-500 mb-6 leading-relaxed">
+                Generate a branded PDF containing current stock levels, low-stock alerts, 
+                and all recent transaction logs for the training camp.
+              </p>
+              <button 
+                onClick={generatePDF}
+                disabled={reportStatus === 'generating'}
+                className="btn-primary py-4 px-8 text-sm font-bold tracking-widest flex items-center justify-center gap-3 w-full md:w-auto"
+              >
+                {reportStatus === 'generating' ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    PROCESSING...
+                  </>
+                ) : (
+                  <>
+                    <Download size={18} />
+                    GENERATE BRANDED PDF
+                  </>
+                )}
+              </button>
             </div>
-            <h3 className="text-slate-900 mb-2 font-bold uppercase tracking-tight">Stock Statement</h3>
-            <p className="text-sm text-slate-500 mb-6 leading-relaxed">Official monthly report formatted with Swiss Side branding.</p>
-            <button className="text-primary font-bold text-xs uppercase tracking-widest flex items-center gap-2 group-hover:gap-3 transition-all">
-                GENERATE PDF <ArrowRight size={14} />
-            </button>
-        </div>
-
-        {/* Custom Range */}
-        <div className="system-card p-8 group hover:border-primary transition-all cursor-pointer bg-white" onClick={() => setIsReportModalOpen(true)}>
-            <div className="w-[56px] h-[56px] rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6 transition-transform group-hover:scale-110">
-                <Settings2 size={28} />
-            </div>
-            <h3 className="text-slate-900 mb-2 font-bold uppercase tracking-tight">Audit Archive</h3>
-            <p className="text-sm text-slate-500 mb-6 leading-relaxed">Specify exact start and end dates for a bespoke audit statement.</p>
-            <button className="text-primary font-bold text-xs uppercase tracking-widest flex items-center gap-2 group-hover:gap-3 transition-all">
-                CONFIGURE <ArrowRight size={14} />
-            </button>
+          </div>
         </div>
       </div>
 
-      {/* Recent Reports Table */}
-      <div className="system-card">
-        <div className="px-6 py-5 border-b-2 border-slate-100 bg-slate-50/50">
-          <h4 className="text-xs-label font-bold text-slate-500 uppercase tracking-widest">Recent Activity logs</h4>
+      {reportStatus === 'success' && (
+        <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-success/5 border border-success/20 rounded-system p-6 flex items-center gap-6">
+            <div className="w-12 h-12 bg-success/20 text-success rounded-full flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 size={24} />
+            </div>
+            <div>
+              <p className="text-success font-bold uppercase tracking-widest text-xs mb-1">Success</p>
+              <p className="text-slate-700 text-sm">Your official statement has been generated and downloaded.</p>
+            </div>
+          </div>
         </div>
-        <div className="divide-y divide-slate-100">
-            <div className="px-6 py-12 text-center">
-                <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
-                    <FileText size={24} />
-                </div>
-                <p className="text-slate-500 font-mono text-sm uppercase tracking-widest">No statements generated for this period</p>
-                <p className="text-slate-400 text-xs mt-1">Activity logs will appear here as you log transactions.</p>
-            </div>
-        </div>
-      </div>
-
-      {/* Generate Report Modal */}
-      <Modal
-        isOpen={isReportModalOpen}
-        onClose={() => { setIsReportModalOpen(false); setReportStatus('idle'); }}
-        title="Generate System Report"
-        footer={reportStatus === 'success' ? (
-            <button onClick={() => setIsReportModalOpen(false)} className="btn-secondary w-full">Close Terminal</button>
-        ) : (
-            <>
-                <button onClick={() => setIsReportModalOpen(false)} className="btn-secondary">Cancel</button>
-                <button 
-                  onClick={generatePDF} 
-                  disabled={reportStatus === 'generating'} 
-                  className="btn-primary"
-                >
-                    {reportStatus === 'generating' ? 'Processing...' : 'Generate Statement'}
-                </button>
-            </>
-        )}
-      >
-        {reportStatus === 'success' ? (
-            <div className="text-center py-8">
-                <CheckCircle2 size={64} className="text-success mx-auto mb-4" />
-                <h3 className="text-slate-900 mb-2 uppercase font-bold tracking-tight">Report Ready</h3>
-                <p className="text-sm text-slate-500 mb-6">Statement has been generated and downloaded to your device storage.</p>
-                <div className="bg-slate-50 p-4 border rounded-system flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <FileText className="text-danger" />
-                        <span className="text-sm font-bold text-slate-800">Swiss_Side_Report_2026.pdf</span>
-                    </div>
-                    <Download size={20} className="text-slate-400" />
-                </div>
-            </div>
-        ) : (
-            <div className="space-y-6">
-                <div>
-                    <label className="block text-xs-label text-slate-500 uppercase mb-3">Report Configuration</label>
-                    <div className="space-y-2">
-                        {['Daily Report', 'Weekly Report', 'Monthly Report', 'Custom Range'].map(t => (
-                            <label key={t} className="flex items-center p-3 border rounded-input cursor-pointer hover:bg-slate-50 transition-colors">
-                                <input type="radio" name="reportType" className="text-primary focus:ring-primary h-4 w-4" defaultChecked={t === 'Monthly Report'} />
-                                <span className="ml-3 text-sm font-bold text-slate-700 uppercase tracking-tight">{t}</span>
-                            </label>
-                        ))}
-                    </div>
-                </div>
-
-                <div>
-                    <label className="block text-xs-label text-slate-500 uppercase mb-2">Period Selection</label>
-                    <div className="input-field flex items-center px-4 pointer-events-none bg-slate-50/50">
-                        <span className="text-sm font-bold text-slate-700">APRIL 2026</span>
-                    </div>
-                </div>
-
-                <div>
-                    <label className="block text-xs-label text-slate-500 uppercase mb-3 text-center">Include in Statement</label>
-                    <div className="grid grid-cols-2 gap-3">
-                        {['Summary Page', 'Transaction Logs', 'Daily Breakdown', 'Staff Performance'].map(c => (
-                            <label key={c} className="flex items-center gap-2 text-[12px] font-medium text-slate-600">
-                                <input type="checkbox" defaultChecked className="text-primary rounded-sm h-4 w-4" />
-                                {c}
-                            </label>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        )}
-      </Modal>
-
+      )}
     </div>
   );
 }
