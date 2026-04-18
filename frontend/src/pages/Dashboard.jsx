@@ -155,7 +155,6 @@ export default function Dashboard() {
                 <th className="px-6 py-3">Current</th>
                 <th className="px-6 py-3">Reorder</th>
                 <th className="px-6 py-3 text-center">Status</th>
-                <th className="px-6 py-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -171,9 +170,6 @@ export default function Dashboard() {
                       <span className={`status-badge ${isOut ? 'status-out' : isLow ? 'status-low' : 'status-ok'}`}>
                         {isOut ? 'Out' : isLow ? 'Low' : 'OK'}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                        <span className="text-[12px] font-bold text-primary hover:underline uppercase tracking-widest">View</span>
                     </td>
                   </tr>
                 );
