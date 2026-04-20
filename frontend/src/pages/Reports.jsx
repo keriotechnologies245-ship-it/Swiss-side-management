@@ -2,26 +2,28 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { FileText, Send, CheckCircle2, Download, Calendar, ArrowRight, Settings2 } from 'lucide-react';
-import { fetchItems, fetchHistory } from '../api';
+import { FileText, CheckCircle2, Download } from 'lucide-react';
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { toast } from 'react-hot-toast';
-import { supabase } from '../lib/supabaseClient';
-import Modal from '../components/Modal';
 
 export default function Reports() {
   const [searchParams] = useSearchParams();
   const initSummaryMode = searchParams.get('summary') === 'true';
-  const [isReportModalOpen, setIsReportModalOpen] = useState(initSummaryMode);
   const [reportStatus, setReportStatus] = useState('idle'); // idle, generating, success
-  const [reportConfig, setReportConfig] = useState({ type: 'monthly', range: 'Current Month' });
+  
+  // Convex Hooks
+  const items = useQuery(api.items.getAll);
+  const history = useQuery(api.transactions.getHistory);
 
   const generatePDF = async () => {
+    if (items === undefined || history === undefined) {
+        toast.error("Data is still loading, please wait.");
+        return;
+    }
+
     setReportStatus('generating');
     try {
-        const [iRes, hRes] = await Promise.all([fetchItems(), fetchHistory()]);
-        const items = iRes?.data || [];
-        const history = hRes?.data || [];
-
         if (items.length === 0 && history.length === 0) {
             toast.error('No inventory data found. Please add items before generating a report.');
             setReportStatus('idle');
@@ -69,12 +71,11 @@ export default function Reports() {
         doc.setFontSize(14);
         doc.text("OFFICIAL STOCK MOVEMENT STATEMENT", 14, 55);
         
-        const { data: { user } } = await supabase.auth.getUser();
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         doc.setTextColor(100, 100, 100);
         doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 62);
-        doc.text(`Admin: ${user?.email || 'System Administrator'}`, 14, 68);
+        doc.text(`Admin: Manager`, 14, 68);
         doc.text(`Reference: SS-INV-${new Date().getTime().toString().slice(-6)}`, 14, 74);
 
         // Inventory Table
@@ -84,7 +85,7 @@ export default function Reports() {
             body: items.map(i => [
               i.name || 'Unknown', 
               `${i.quantity || 0} ${i.unit || ''}`, 
-              (i.quantity || 0) <= (i.reorder_level || 0) ? 'REORDER' : 'STABLE'
+              (i.quantity || 0) <= (i.reorderLevel || 0) ? 'REORDER' : 'STABLE'
             ]),
             theme: 'grid',
             headStyles: { fillColor: [163, 94, 69] }, // Brand color
@@ -99,9 +100,9 @@ export default function Reports() {
             startY: finalY + 20,
             head: [['Date', 'Type', 'Item Name', 'Qty', 'User']],
             body: history.slice(0, 500).map(h => [
-                h.created_at ? new Date(h.created_at).toLocaleDateString() : 'N/A',
+                h._creationTime ? new Date(h._creationTime).toLocaleDateString() : 'N/A',
                 h.type || 'N/A',
-                h.item_name || 'Unknown',
+                h.itemName || 'Unknown',
                 `${h.type === 'RESTOCK' ? '+' : '-'}${h.quantity || 0} ${h.unit || ''}`,
                 h.person || 'Unknown'
             ]),

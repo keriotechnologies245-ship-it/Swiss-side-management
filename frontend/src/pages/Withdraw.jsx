@@ -1,42 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { fetchItems, createWithdrawal } from '../api';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { toast } from 'react-hot-toast';
 
 export default function Withdraw() {
-  const [items, setItems] = useState([]);
-  const [selectedItemObj, setSelectedItemObj] = useState(null);
+  const items = useQuery(api.items.getAll);
+  const withdrawMutation = useMutation(api.transactions.withdraw);
   const navigate = useNavigate();
 
   const { register, handleSubmit, watch } = useForm();
   const selectedItemId = watch('itemId');
 
-  useEffect(() => {
-    fetchItems().then(res => setItems(res.data || [])).catch(() => setItems([]));
-  }, []);
-
-  useEffect(() => {
-    if (selectedItemId) {
-      setSelectedItemObj(items.find(i => i.id.toString() === selectedItemId));
-    } else {
-      setSelectedItemObj(null);
-    }
+  const selectedItemObj = useMemo(() => {
+    return items?.find(i => i._id === selectedItemId);
   }, [selectedItemId, items]);
 
   const onSubmit = async (data) => {
     try {
-      await createWithdrawal({
-        itemId: parseInt(data.itemId),
+      await withdrawMutation({
+        itemId: data.itemId,
         quantity: parseFloat(data.quantity),
-        staffName: data.staffName,
+        person: data.staffName,
         notes: data.notes || ''
       });
       // Fast, simple redirect
       navigate('/dashboard');
     } catch (err) {
-      alert("Error: " + err.message);
+      toast.error(err.message);
     }
   };
+
+  if (items === undefined) return <div className="p-8 font-mono text-slate-500 uppercase tracking-widest text-xs">Accessing Inventory...</div>;
 
   return (
     <div className="max-w-xl mx-auto space-y-4">
@@ -54,9 +50,9 @@ export default function Withdraw() {
               className="input-field bg-slate-50 font-bold"
               defaultValue=""
             >
-              <option value="" disabled>[Select item ▼]</option>
+              <option value="" disabled>[Select item]</option>
               {items.map(i => (
-                <option key={i.id} value={i.id} disabled={i.quantity <= 0}>
+                <option key={i._id} value={i._id} disabled={i.quantity <= 0}>
                   {i.name} (Stock: {i.quantity} {i.unit})
                 </option>
               ))}
@@ -79,7 +75,7 @@ export default function Withdraw() {
                   </div>
                 )}
             </div>
-            {selectedItemObj && selectedItemObj.quantity && (
+            {selectedItemObj && selectedItemObj.quantity !== undefined && (
                 <p className="text-xs text-slate-500 font-mono mt-2">
                     Current stock: {selectedItemObj.quantity} {selectedItemObj.unit}
                 </p>

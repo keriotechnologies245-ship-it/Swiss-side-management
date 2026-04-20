@@ -1,44 +1,28 @@
-import { useState, useEffect, useCallback } from 'react';
-import { fetchHistory, fetchItems } from '../api';
-import { Search, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function Transactions() {
-  const [history, setHistory] = useState([]);
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const history = useQuery(api.transactions.getHistory);
+  const items = useQuery(api.items.getAll);
+
   const [filters, setFilters] = useState({ dateRange: 'all', itemId: 'all', type: 'all', search: '' });
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [hRes, iRes] = await Promise.all([fetchHistory(), fetchItems()]);
-      setHistory(hRes.data || []);
-      setItems(iRes.data || []);
-    } catch (err) {
-      toast.error('Ledger Access Failed: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   const filteredHistory = (history || []).filter(h => {
     if (!h) return false;
-    const matchesItem = filters.itemId === 'all' || h.item_id?.toString() === filters.itemId;
+    const matchesItem = filters.itemId === 'all' || h.itemId === filters.itemId;
     const matchesType = filters.type === 'all' || h.type === filters.type;
     const person = h.person || '';
-    const itemName = h.item_name || '';
+    const itemName = h.itemName || '';
     const search = filters.search || '';
     const matchesSearch = person.toLowerCase().includes(search.toLowerCase()) || 
                           itemName.toLowerCase().includes(search.toLowerCase());
     return matchesItem && matchesType && matchesSearch;
   });
 
-  if (loading) return <div className="p-8 font-mono text-slate-500 uppercase tracking-widest text-xs">Fetching Ledgers...</div>;
+  if (history === undefined || items === undefined) return <div className="p-8 font-mono text-slate-500 uppercase tracking-widest text-xs">Fetching Ledgers...</div>;
 
   return (
     <div className="space-y-6">
@@ -82,7 +66,7 @@ export default function Transactions() {
             onChange={e => setFilters({...filters, itemId: e.target.value})}
         >
             <option value="all">All Items</option>
-            {items.map(i => <option key={i.id} value={i.id.toString()}>{i.name}</option>)}
+            {items.map(i => <option key={i._id} value={i._id}>{i.name}</option>)}
         </select>
 
         <select 
@@ -115,12 +99,12 @@ export default function Transactions() {
                 <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-mono text-sm uppercase tracking-widest italic">No matching transactions found</td></tr>
               ) : (
                 filteredHistory.map((h) => (
-                  <tr key={h.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={h._id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="text-sm font-semibold text-slate-900">{format(new Date(h.created_at), 'MMM d, yyyy')}</div>
-                      <div className="text-[11px] text-slate-400 font-mono mt-0.5 uppercase tracking-tighter">{format(new Date(h.created_at), 'hh:mm a')}</div>
+                      <div className="text-sm font-semibold text-slate-900">{format(new Date(h._creationTime), 'MMM d, yyyy')}</div>
+                      <div className="text-[11px] text-slate-400 font-mono mt-0.5 uppercase tracking-tighter">{format(new Date(h._creationTime), 'hh:mm a')}</div>
                     </td>
-                    <td className="px-6 py-4 font-semibold text-slate-900">{h.item_name}</td>
+                    <td className="px-6 py-4 font-semibold text-slate-900">{h.itemName}</td>
                     <td className="px-6 py-4">
                       <span className={`status-badge ${h.type === 'RESTOCK' ? 'status-ok' : 'status-out'}`}>
                         {h.type}

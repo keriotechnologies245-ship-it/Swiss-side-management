@@ -1,38 +1,23 @@
-import { useState, useEffect } from 'react';
-import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
-import { supabase } from '../lib/supabaseClient';
-import { logout } from '../api';
 
 const Layout = () => {
-  const location = useLocation();
   const navigate = useNavigate();
-  const [userEmail, setUserEmail] = useState('');
+  const [userEmail, setUserEmail] = useState(localStorage.getItem('swiss_side_user') || 'Manager');
 
   useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          navigate('/login');
-        } else {
-          setUserEmail(user.email);
-        }
-      } catch (err) {
-        navigate('/login');
-      }
-    };
-    checkUser();
+    const session = localStorage.getItem('swiss_side_session');
+    if (!session) {
+      navigate('/login');
+    }
   }, [navigate]);
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      toast.success('Logged out successfully');
-      navigate('/login');
-    } catch (err) {
-      toast.error('Logout failed');
-    }
+  const handleLogout = () => {
+    localStorage.removeItem('swiss_side_session');
+    localStorage.removeItem('swiss_side_user');
+    toast.success('Logged out successfully');
+    navigate('/login');
   };
 
   const navItems = [
@@ -58,8 +43,8 @@ const Layout = () => {
 
         <div className="flex items-center gap-6">
           <div className="hidden md:flex flex-col items-end">
-             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Authenticated As</span>
-             <span className="text-sm font-bold text-primary lowercase">{userEmail || 'Loading...'}</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Authenticated As</span>
+            <span className="text-sm font-bold text-primary lowercase">{userEmail}</span>
           </div>
           <button 
             onClick={handleLogout}

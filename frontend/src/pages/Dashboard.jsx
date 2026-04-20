@@ -1,59 +1,51 @@
-import { useState, useEffect, useCallback } from 'react';
-import { fetchItems, fetchHistory, createWithdrawal, addStock } from '../api';
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import Modal from '../components/Modal';
-import { supabase } from '../lib/supabaseClient';
 
 export default function Dashboard() {
-  const [items, setItems] = useState([]);
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [isAddStockModalOpen, setIsAddStockModalOpen] = useState(false);
+  
+  // Convex Hooks (Realtime by default!)
+  const items = useQuery(api.items.getAll);
+  const rawHistory = useQuery(api.transactions.getHistory);
+  const withdrawMutation = useMutation(api.transactions.withdraw);
+  const restockMutation = useMutation(api.transactions.restock);
 
   // Form States
   const [formLoading, setFormLoading] = useState(false);
   const [formData, setFormData] = useState({ itemId: '', quantity: '', staffName: '', source: '', notes: '' });
-  const [userName, setUserName] = useState('Manager');
+  const [userName] = useState('Manager'); // In a real app, get this from Auth
 
-  const loadData = useCallback(async () => {
-    try {
-      const [iRes, hRes, user] = await Promise.all([fetchItems(), fetchHistory(), supabase.auth.getUser()]);
-      setItems(iRes.data || []);
-      if (user.data.user) setUserName(user.data.user.email.split('@')[0]);
-      const todayStr = new Date().toDateString();
-      setHistory((hRes.data || []).filter(h => new Date(h.created_at).toDateString() === todayStr));
-    } catch (err) {
-      toast.error('Failed to sync with database');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 30000); // Sync every 30s
-    return () => clearInterval(interval);
-  }, [loadData]);
+  // Filter history for today
+  const history = useMemo(() => {
+    if (!rawHistory) return [];
+    const todayStr = new Date().toDateString();
+    return rawHistory.filter(h => new Date(h._creationTime).toDateString() === todayStr);
+  }, [rawHistory]);
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
+    if (!formData.itemId || !formData.quantity) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
     setFormLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Session expired. Please log in again.');
-
-      await createWithdrawal({
-        itemId: parseInt(formData.itemId),
+      await withdrawMutation({
+        itemId: formData.itemId,
         quantity: parseFloat(formData.quantity),
-        staffName: formData.staffName || user.email.split('@')[0], // Use form name or clean email
+        person: formData.staffName || userName,
         notes: formData.notes
       });
       toast.success('Withdrawal logged successfully');
       setIsWithdrawModalOpen(false);
       setFormData({ itemId: '', quantity: '', staffName: '', source: '', notes: '' });
-      loadData();
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -63,24 +55,21 @@ export default function Dashboard() {
 
   const handleAddStock = async (e) => {
     e.preventDefault();
+    if (!formData.itemId || !formData.quantity) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
     setFormLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate('/login');
-        return;
-      }
-
-      await addStock({
-        itemId: parseInt(formData.itemId),
+      await restockMutation({
+        itemId: formData.itemId,
         quantity: parseFloat(formData.quantity),
-        source: formData.source || user.email.split('@')[0], // Use form source or clean email
+        person: formData.source || userName,
         notes: formData.notes
       });
       toast.success('Stock added successfully');
       setIsAddStockModalOpen(false);
       setFormData({ itemId: '', quantity: '', staffName: '', source: '', notes: '' });
-      loadData();
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -88,11 +77,16 @@ export default function Dashboard() {
     }
   };
 
-  const selectedItem = items.find(i => i.id.toString() === formData.itemId);
+  const selectedItem = useMemo(() => 
+    items?.find(i => i._id === formData.itemId),
+    [items, formData.itemId]
+  );
 
-  if (loading) return <div className="p-8 font-mono text-slate-500 uppercase tracking-widest text-xs animate-pulse">Initializing System...</div>;
+  if (items === undefined || rawHistory === undefined) {
+    return <div className="p-8 font-mono text-slate-500 uppercase tracking-widest text-xs animate-pulse">Initializing System...</div>;
+  }
 
-  const lowStockCount = (items || []).filter(i => (i?.quantity || 0) > 0 && (i?.quantity || 0) <= (i?.reorder_level || 0)).length;
+  const lowStockCount = items.filter(i => i.quantity > 0 && i.quantity <= i.reorderLevel).length;
 
   return (
     <div className="space-y-6">
@@ -127,16 +121,16 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <button 
+      <div className="grid grid-cols-2 gap-4">
+        <button
           onClick={() => setIsWithdrawModalOpen(true)}
-          className="h-[56px] rounded-system border-2 border-primary text-primary font-bold hover:bg-primary hover:text-white transition-all uppercase tracking-wider text-sm"
+          className="h-[56px] rounded-system border-2 border-primary text-primary font-bold hover:bg-primary hover:text-white transition-all uppercase tracking-wider text-xs"
         >
           Log Withdrawal
         </button>
-        <button 
+        <button
           onClick={() => setIsAddStockModalOpen(true)}
-          className="h-[56px] rounded-system bg-primary text-white font-bold hover:bg-primary-dark transition-all uppercase tracking-wider text-sm shadow-sm"
+          className="h-[56px] rounded-system bg-primary text-white font-bold hover:bg-primary-dark transition-all uppercase tracking-wider text-xs shadow-sm"
         >
           Add Stock
         </button>
@@ -160,12 +154,12 @@ export default function Dashboard() {
             <tbody className="divide-y divide-slate-100">
               {items.map((item) => {
                 const isOut = item.quantity === 0;
-                const isLow = item.quantity > 0 && item.quantity <= item.reorder_level;
+                const isLow = item.quantity > 0 && item.quantity <= item.reorderLevel;
                 return (
-                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => navigate('/inventory')}>
+                  <tr key={item._id} className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => navigate('/inventory')}>
                     <td className="px-6 py-4 font-semibold text-slate-900">{item.name}</td>
                     <td className="px-6 py-4 text-slate-600 font-mono text-sm">{item.quantity} {item.unit}</td>
-                    <td className="px-6 py-4 text-slate-400 font-mono text-sm">{item.reorder_level} {item.unit}</td>
+                    <td className="px-6 py-4 text-slate-400 font-mono text-sm">{item.reorderLevel} {item.unit}</td>
                     <td className="px-6 py-4 text-center">
                       <span className={`status-badge ${isOut ? 'status-out' : isLow ? 'status-low' : 'status-ok'}`}>
                         {isOut ? 'Out' : isLow ? 'Low' : 'OK'}
@@ -200,9 +194,9 @@ export default function Dashboard() {
                 <tr><td colSpan="5" className="px-6 py-8 text-center text-slate-400 font-mono text-xs uppercase tracking-widest">No transactions logged today</td></tr>
               ) : (
                 history.map((h) => (
-                  <tr key={h.id} className="hover:bg-slate-50/50">
-                    <td className="px-6 py-4 text-slate-400 font-mono text-xs italic">{format(new Date(h.created_at), 'hh:mm a')}</td>
-                    <td className="px-6 py-4 font-semibold text-slate-900">{h.item_name}</td>
+                  <tr key={h._id} className="hover:bg-slate-50/50">
+                    <td className="px-6 py-4 text-slate-400 font-mono text-xs italic">{format(new Date(h._creationTime), 'hh:mm a')}</td>
+                    <td className="px-6 py-4 font-semibold text-slate-900">{h.itemName}</td>
                     <td className={`px-6 py-4 text-[11px] font-bold uppercase ${h.type === 'RESTOCK' ? 'text-success' : 'text-danger'}`}>{h.type}</td>
                     <td className={`px-6 py-4 font-bold font-mono text-sm ${h.type === 'RESTOCK' ? 'text-success' : 'text-danger'}`}>
                       {h.type === 'RESTOCK' ? '+' : '-'}{h.quantity} {h.unit}
@@ -241,13 +235,13 @@ export default function Dashboard() {
               onChange={e => setFormData({...formData, itemId: e.target.value})}
             >
               <option value="">Select an item...</option>
-              {items.map(i => <option key={i.id} value={i.id}>{i.name} ({i.quantity} {i.unit} available)</option>)}
+              {items.map(i => <option key={i._id} value={i._id}>{i.name} ({i.quantity} {i.unit} available)</option>)}
             </select>
           </div>
           {selectedItem && (
             <div className="bg-slate-50 p-3 rounded-input text-sm text-slate-500 flex justify-between">
               <span>Current Stock: <strong className="text-slate-900">{selectedItem.quantity} {selectedItem.unit}</strong></span>
-              <span>Reorder Level: <strong className="text-slate-900">{selectedItem.reorder_level} {selectedItem.unit}</strong></span>
+              <span>Reorder Level: <strong className="text-slate-900">{selectedItem.reorderLevel} {selectedItem.unit}</strong></span>
             </div>
           )}
           <div>
@@ -309,7 +303,7 @@ export default function Dashboard() {
               onChange={e => setFormData({...formData, itemId: e.target.value})}
             >
               <option value="">Select an item...</option>
-              {items.map(i => <option key={i.id} value={i.id}>{i.name} (Current: {i.quantity} {i.unit})</option>)}
+              {items.map(i => <option key={i._id} value={i._id}>{i.name} (Current: {i.quantity} {i.unit})</option>)}
             </select>
           </div>
           <div>

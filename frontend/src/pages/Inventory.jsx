@@ -1,33 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
-import { fetchItems } from '../api';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { Pencil, Trash2, Plus, RefreshCw } from 'lucide-react';
 import Modal from '../components/Modal';
 import { toast } from 'react-hot-toast';
-import { supabase } from '../lib/supabaseClient';
 
 export default function Inventory() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Convex Hooks
+  const items = useQuery(api.items.getAll);
+  const createItem = useMutation(api.items.create);
+  const updateItem = useMutation(api.items.update);
+  const removeItem = useMutation(api.items.remove);
+
+  const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
-  const [formData, setFormData] = useState({ name: '', unit: '', quantity: '', reorder_level: '', notes: '' });
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetchItems();
-      setItems(res.data || []);
-    } catch (err) {
-      toast.error('Inventory Sync Failed: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const [formData, setFormData] = useState({ name: '', unit: 'kg', quantity: '', reorderLevel: '', notes: '' });
 
   const handleOpenModal = (item = null) => {
     setEditingItem(item);
@@ -35,46 +24,39 @@ export default function Inventory() {
       setFormData({ 
         name: item.name, 
         unit: item.unit, 
-        quantity: item.quantity, 
-        reorder_level: item.reorder_level, 
+        quantity: item.quantity.toString(), 
+        reorderLevel: item.reorderLevel.toString(), 
         notes: item.notes || '' 
       });
     } else {
-      setFormData({ name: '', unit: 'kg', quantity: '', reorder_level: '', notes: '' });
+      setFormData({ name: '', unit: 'kg', quantity: '', reorderLevel: '', notes: '' });
     }
     setIsModalOpen(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.name) {
+      toast.error("Item name is required");
+      return;
+    }
     setLoading(true);
     try {
+      const payload = {
+        name: formData.name,
+        unit: formData.unit,
+        quantity: parseFloat(formData.quantity) || 0,
+        reorderLevel: parseFloat(formData.reorderLevel) || 0,
+      };
+
       if (editingItem) {
-        const { error } = await supabase
-          .from('items')
-          .update({
-            name: formData.name,
-            unit: formData.unit,
-            quantity: parseFloat(formData.quantity) || 0,
-            reorder_level: parseFloat(formData.reorder_level) || 0,
-          })
-          .eq('id', editingItem.id);
-        if (error) throw error;
+        await updateItem({ id: editingItem._id, ...payload });
         toast.success('Item updated successfully');
       } else {
-        const { error } = await supabase
-          .from('items')
-          .insert({
-            name: formData.name,
-            unit: formData.unit,
-            quantity: parseFloat(formData.quantity) || 0,
-            reorder_level: parseFloat(formData.reorder_level) || 0,
-          });
-        if (error) throw error;
+        await createItem(payload);
         toast.success('New item added successfully');
       }
       setIsModalOpen(false);
-      loadData();
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -82,21 +64,36 @@ export default function Inventory() {
     }
   };
 
-  if (loading) return <div className="p-8 font-mono text-slate-500 uppercase tracking-widest text-xs">Accessing Inventory...</div>;
+  const handleDelete = async (item) => {
+    if (window.confirm('Are you sure you want to permanently delete this item? This action cannot be undone.')) {
+      try {
+        await removeItem({ id: item._id });
+        toast.success('Item removed from inventory');
+      } catch (err) {
+        toast.error(err.message);
+      }
+    }
+  };
+
+  if (items === undefined) return <div className="p-8 font-mono text-slate-500 uppercase tracking-widest text-xs">Accessing Inventory...</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between pb-6 border-b border-slate-200">
         <div>
           <h1>Inventory Management</h1>
-          <p className="text-slate-500 text-sm mt-1">Manage and edit your camp supplies stock.</p>
+          <p className="text-slate-500 text-sm mt-1">
+            Manage and edit your camp supplies stock.
+          </p>
         </div>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="btn-primary h-[48px] px-6 flex items-center gap-2"
-        >
-          <Plus size={20} /> ADD NEW ITEM
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => handleOpenModal()}
+            className="btn-primary h-[48px] px-6 flex items-center gap-2"
+          >
+            <Plus size={20} /> ADD NEW ITEM
+          </button>
+        </div>
       </div>
 
       <div className="system-card overflow-hidden">
@@ -115,13 +112,13 @@ export default function Inventory() {
             <tbody className="divide-y divide-slate-100">
               {items.map((item) => {
                 const isOut = item.quantity === 0;
-                const isLow = item.quantity > 0 && item.quantity <= item.reorder_level;
+                const isLow = item.quantity > 0 && item.quantity <= item.reorderLevel;
                 return (
-                  <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={item._id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-5 font-semibold text-slate-900">{item.name}</td>
                     <td className="px-6 py-5 text-lg font-bold text-slate-900">{item.quantity}</td>
                     <td className="px-6 py-5 text-slate-500">{item.unit}</td>
-                    <td className="px-6 py-5 text-slate-400 font-mono text-sm">Min: {item.reorder_level}</td>
+                    <td className="px-6 py-5 text-slate-400 font-mono text-sm">Min: {item.reorderLevel}</td>
                     <td className="px-6 py-5 text-center">
                       <span className={`status-badge ${isOut ? 'status-out' : isLow ? 'status-low' : 'status-ok'}`}>
                         {isOut ? 'Out' : isLow ? 'Low' : 'OK'}
@@ -137,16 +134,7 @@ export default function Inventory() {
                           <Pencil size={18} />
                         </button>
                         <button 
-                          onClick={async () => {
-                            if (window.confirm('Are you sure you want to permanently delete this item? This action cannot be undone.')) {
-                              const { error } = await supabase.from('items').delete().eq('id', item.id);
-                              if (error) toast.error(error.message);
-                              else {
-                                toast.success('Item removed from inventory');
-                                loadData();
-                              }
-                            }
-                          }}
+                          onClick={() => handleDelete(item)}
                           className="p-2 hover:bg-danger/10 text-danger hover:text-danger-dark transition-colors rounded-md"
                           title="Delete"
                         >
@@ -170,7 +158,9 @@ export default function Inventory() {
         footer={(
           <>
             <button onClick={() => setIsModalOpen(false)} className="btn-secondary">Cancel</button>
-            <button onClick={handleSubmit} className="btn-primary">Save Item</button>
+            <button onClick={handleSubmit} disabled={loading} className="btn-primary">
+              {loading ? 'Saving...' : 'Save Item'}
+            </button>
           </>
         )}
       >
@@ -216,8 +206,8 @@ export default function Inventory() {
               <input 
                 type="number"
                 className="input-field"
-                value={formData.reorder_level}
-                onChange={e => setFormData({...formData, reorder_level: e.target.value})}
+                value={formData.reorderLevel}
+                onChange={e => setFormData({...formData, reorderLevel: e.target.value})}
                 placeholder="0.00"
               />
             </div>
