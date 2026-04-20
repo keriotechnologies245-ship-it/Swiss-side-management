@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: swiss-side-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm run build
+    publishDir: dist
+    envVars:
+      - key: VITE_CONVEX_URL
+        sync: false
+      - key: VITE_CONVEX_SITE_URL
+        sync: false
