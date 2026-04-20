@@ -7,6 +7,6 @@ services:
     publishDir: dist
     envVars:
       - key: VITE_CONVEX_URL
-        sync: false
+        value: https://stoic-flamingo-219.convex.cloud
       - key: VITE_CONVEX_SITE_URL
-        sync: false
+        value: https://stoic-flamingo-219.convex.site
