@@ -3,8 +3,8 @@ services:
     name: swiss-side-frontend
     runtime: static
     rootDir: frontend
-    buildCommand: npm run build
-    publishDir: dist
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
     envVars:
       - key: VITE_CONVEX_URL
         value: https://stoic-flamingo-219.convex.cloud
