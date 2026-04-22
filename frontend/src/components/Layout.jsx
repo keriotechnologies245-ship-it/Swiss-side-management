@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { 
   LayoutDashboard, 
@@ -30,6 +30,7 @@ const Layout = () => {
 
   const sessionToken = localStorage.getItem('swiss_side_session') || '';
   const verifiedUser = useQuery(api.users.verifySession, { token: sessionToken });
+  const promoteToAdmin = useMutation(api.users.promoteOnlyUserToAdmin);
 
   useEffect(() => {
     if (verifiedUser === null) {
@@ -38,9 +39,14 @@ const Layout = () => {
       localStorage.removeItem('swiss_side_role');
       navigate('/login');
     } else if (verifiedUser) {
+      // Sync role from server to localStorage
       localStorage.setItem('swiss_side_role', verifiedUser.role);
+      // Self-healing: if only user exists but isn't admin yet, promote them
+      if (verifiedUser.role !== 'super_admin' && sessionToken) {
+        promoteToAdmin({ token: sessionToken }).catch(() => {});
+      }
     }
-  }, [verifiedUser, navigate]);
+  }, [verifiedUser, navigate, sessionToken, promoteToAdmin]);
 
   const handleLogout = () => {
     localStorage.removeItem('swiss_side_session');

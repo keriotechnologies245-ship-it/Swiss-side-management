@@ -278,25 +278,38 @@ export const getOtpForEmail = query({
 });
 
 /**
- * Verify session token and return user info
+ * Verify session token and return user info (READ-ONLY - queries cannot mutate)
  */
 export const verifySession = query({
   args: { token: v.string() },
   handler: async (ctx, args) => {
     try {
       const user = await checkAuth(ctx, args.token);
-      
-      // SELF-HEALING: If this is the only user and not admin, promote them
-      const allUsers = await ctx.db.query("users").collect();
-      if (allUsers.length === 1 && user.role !== "super_admin") {
-        await ctx.db.patch(user._id, { role: "super_admin" });
-        return { email: user.email, role: "super_admin" };
-      }
-
       return { email: user.email, role: user.role };
     } catch {
       return null;
     }
+  },
+});
+
+/**
+ * Self-healing mutation: Promote the only user to super_admin if they are not already.
+ * Called from the frontend after login if user has no admin access.
+ */
+export const promoteOnlyUserToAdmin = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q: any) => q.eq("token", args.token))
+      .unique();
+    if (!user) throw new Error("Invalid session.");
+    const allUsers = await ctx.db.query("users").collect();
+    if (allUsers.length === 1 && user.role !== "super_admin") {
+      await ctx.db.patch(user._id, { role: "super_admin" });
+      return { promoted: true };
+    }
+    return { promoted: false };
   },
 });
 
