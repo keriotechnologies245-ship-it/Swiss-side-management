@@ -1,30 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import bcrypt from "bcryptjs";
-
-const SUPER_ADMIN_EMAIL = "roychumba16@gmail.com";
-
-/**
- * INTERNAL HELPER: Verifies a session token and returns the user object.
- */
-async function checkAuth(ctx: any, token: string, requiredRole?: "super_admin" | "staff") {
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_token", (q: any) => q.eq("token", token))
-    .unique();
-
-  if (!user) throw new Error("Unauthorized: Invalid session token.");
-  
-  if (user.tokenExpiry && user.tokenExpiry < Date.now()) {
-    throw new Error("Session expired. Please log in again.");
-  }
-
-  if (requiredRole && user.role !== requiredRole && user.role !== "super_admin") {
-    throw new Error("Forbidden: You do not have permission for this operation.");
-  }
-
-  return user;
-}
+import { checkAuth } from "./auth";
 
 /**
  * Checks if the system is completely empty (no users at all)
@@ -125,9 +102,6 @@ export const initializeRootOwnership = mutation({
       throw new Error("System is already initialized.");
     }
 
-    if (args.email.toLowerCase() !== SUPER_ADMIN_EMAIL.toLowerCase()) {
-      throw new Error("Only the primary administrator can initialize the system.");
-    }
 
     // Hash the Master Password
     const salt = bcrypt.genSaltSync(10);
@@ -280,8 +254,11 @@ export const removeUser = mutation({
     await checkAuth(ctx, args.adminToken, "super_admin");
 
     const userToRemove = await ctx.db.get(args.userId);
-    if (userToRemove?.email === SUPER_ADMIN_EMAIL) {
-      throw new Error("Cannot remove the Super Admin account.");
+    if (userToRemove?.role === "super_admin") {
+      const superAdmins = await ctx.db.query("users").filter(q => q.eq(q.field("role"), "super_admin")).collect();
+      if (superAdmins.length <= 1) {
+        throw new Error("Cannot remove the last Super Admin account.");
+      }
     }
 
     await ctx.db.delete(args.userId);
