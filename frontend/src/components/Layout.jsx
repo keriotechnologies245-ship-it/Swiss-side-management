@@ -35,7 +35,10 @@ const Layout = () => {
     if (verifiedUser === null) {
       localStorage.removeItem('swiss_side_session');
       localStorage.removeItem('swiss_side_user');
+      localStorage.removeItem('swiss_side_role');
       navigate('/login');
+    } else if (verifiedUser) {
+      localStorage.setItem('swiss_side_role', verifiedUser.role);
     }
   }, [verifiedUser, navigate]);
 

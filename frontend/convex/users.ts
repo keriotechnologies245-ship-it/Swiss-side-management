@@ -3,15 +3,13 @@ import { v } from "convex/values";
 import bcrypt from "bcryptjs";
 import { checkAuth } from "./auth";
 
-/**
- * Checks if the system is completely empty (no users at all)
- */
 export const isSystemEmpty = query({
   handler: async (ctx) => {
     const users = await ctx.db.query("users").collect();
     return users.length === 0;
   },
 });
+
 
 /**
  * Step 1: Verify Password and Generate OTP
@@ -287,6 +285,14 @@ export const verifySession = query({
   handler: async (ctx, args) => {
     try {
       const user = await checkAuth(ctx, args.token);
+      
+      // SELF-HEALING: If this is the only user and not admin, promote them
+      const allUsers = await ctx.db.query("users").collect();
+      if (allUsers.length === 1 && user.role !== "super_admin") {
+        await ctx.db.patch(user._id, { role: "super_admin" });
+        return { email: user.email, role: "super_admin" };
+      }
+
       return { email: user.email, role: user.role };
     } catch {
       return null;
