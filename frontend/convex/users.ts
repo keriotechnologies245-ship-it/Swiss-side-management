@@ -12,7 +12,7 @@ export const isSystemEmpty = query({
 
 
 /**
- * Step 1: Verify Password and Generate OTP
+ * Sign In: Verify credentials and issue session token directly (no OTP required)
  */
 export const signIn = mutation({
   args: { email: v.string(), password: v.string() },
@@ -38,52 +38,19 @@ export const signIn = mutation({
       throw new Error(attempts >= 5 ? "Account locked for 15 minutes." : "Invalid credentials");
     }
 
-    // 3. Password correct -> Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
-    
-    await ctx.db.patch(user._id, { 
-      otpCode: otp, 
-      otpExpiry: expiry,
-      failedAttempts: 0 
-    });
-
-    return { requiresOtp: true, email: user.email };
-  },
-});
-
-/**
- * Step 2: Verify OTP and grant Session Token
- */
-export const verifyOtp = mutation({
-  args: { email: v.string(), code: v.string() },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .unique();
-
-    if (!user || user.otpCode !== args.code) {
-      throw new Error("Invalid or expired OTP code.");
-    }
-
-    if (user.otpExpiry && user.otpExpiry < Date.now()) {
-      throw new Error("OTP code has expired.");
-    }
-
-    // Success -> Issue session token
-    const token = Math.random().toString(36).substring(7) + Date.now();
-    const sessionExpiry = Date.now() + 24 * 60 * 60 * 1000;
+    // 3. Issue session token directly — no OTP needed for internal staff tool
+    const token = Math.random().toString(36).substring(7) + Date.now() + Math.random().toString(36).substring(7);
+    const sessionExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
     await ctx.db.patch(user._id, {
       token,
       tokenExpiry: sessionExpiry,
-      otpCode: undefined, // Clear OTP after use
-      otpExpiry: undefined
+      failedAttempts: 0,
+      lockUntil: undefined,
     });
 
     return { token, email: user.email, role: user.role };
-  }
+  },
 });
 
 /**
