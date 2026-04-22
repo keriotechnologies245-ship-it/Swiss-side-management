@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { 
   LayoutDashboard, 
   ChefHat, 
