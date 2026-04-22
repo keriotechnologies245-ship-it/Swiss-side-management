@@ -1,192 +1,248 @@
-import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { FileText, CheckCircle2, Download } from 'lucide-react';
+import { 
+  FileText, 
+  Download, 
+  ChefHat, 
+  Dumbbell, 
+  Bed, 
+  Package,
+  ShieldCheck,
+  ChevronRight,
+  Info,
+  AlertCircle
+} from 'lucide-react';
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { toast } from 'react-hot-toast';
 
 export default function Reports() {
-  const [searchParams] = useSearchParams();
-  const initSummaryMode = searchParams.get('summary') === 'true';
-  const [reportStatus, setReportStatus] = useState('idle'); // idle, generating, success
+  const [reportStatus, setReportStatus] = useState('idle');
   
-  // Convex Hooks
-  const items = useQuery(api.items.getAll);
-  const history = useQuery(api.transactions.getHistory);
+  // Data Aggregation
+  const kitchenItems = useQuery(api.items.getAll);
+  const gymItems = useQuery(api.gymItems.getAll);
+  const rooms = useQuery(api.rooms.getAll);
+  const roomItems = useQuery(api.roomItems.getAll);
+  const generalSupplies = useQuery(api.generalSupplies.getAll);
+  const kitchenHistory = useQuery(api.transactions.getHistory);
+  const procurementNeeds = useQuery(api.needs.getAll);
 
-  const generatePDF = async () => {
-    if (items === undefined || history === undefined) {
-        toast.error("Data is still loading, please wait.");
-        return;
-    }
+  const stats = useMemo(() => {
+    if (!kitchenItems || !gymItems || !rooms || !roomItems || !generalSupplies || !procurementNeeds) return null;
+    return { kitchenItems, gymItems, rooms, roomItems, generalSupplies, kitchenHistory, procurementNeeds };
+  }, [kitchenItems, gymItems, rooms, roomItems, generalSupplies, kitchenHistory, procurementNeeds]);
 
+  const generatePDF = async (type = 'master') => {
+    if (!stats) return toast.error("Intelligence data not yet synchronized.");
     setReportStatus('generating');
+
     try {
-        if (items.length === 0 && history.length === 0) {
-            toast.error('No inventory data found. Please add items before generating a report.');
-            setReportStatus('idle');
-            return;
-        }
+      const doc = new jsPDF();
+      const timestamp = new Date().toLocaleString();
+      const dateStr = new Date().toISOString().split('T')[0];
 
-        const doc = new jsPDF();
-        
-        // Helper to load image as base64
-        const loadImage = (url) => {
-          return new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              canvas.width = img.width;
-              canvas.height = img.height;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0);
-              resolve(canvas.toDataURL('image/png'));
-            };
-            img.onerror = () => resolve(null);
-            img.src = url;
-          });
-        };
+      // Premium Header
+      doc.setFillColor(163, 94, 69); // Terracotta
+      doc.rect(0, 0, 210, 45, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(28);
+      doc.text("SWISS SIDE ITEN", 105, 25, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text("PREMIUM LODGE & ATHLETE PERFORMANCE CENTER • ITEN, KENYA", 105, 33, { align: 'center' });
 
-        const logoData = await loadImage('/logo.png');
-        
-        // Brand Header (Iten Terracotta)
-        doc.setFillColor(163, 94, 69); // #A35E45
-        doc.rect(0, 0, 210, 40, 'F');
+      // Sub-Header
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      const titles = {
+        master: "EXECUTIVE DAILY SUMMARY",
+        rooms: "ROOM STATUS & INVENTORY REPORT",
+        gym: "GYM EQUIPMENT & MAINTENANCE REPORT",
+        kitchen: "KITCHEN STOCK & USAGE REPORT",
+        issues: "OPEN ISSUES & NEEDS AUDIT"
+      };
+      doc.text(titles[type] || "OPERATIONAL REPORT", 15, 60);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 120, 120);
+      doc.text(`REFERENCE: SS-REPORT-${dateStr}-${Math.random().toString(36).substring(7).toUpperCase()}`, 15, 66);
+      doc.text(`GENERATED ON: ${timestamp}`, 15, 71);
 
-        if (logoData) {
-          doc.addImage(logoData, 'PNG', 15, 8, 24, 24);
-        }
-        
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('times', 'bold');
-        doc.setFontSize(24);
-        doc.text("THE SWISS SIDE", 105, 20, { align: 'center' });
+      let currentY = 80;
+
+      // Section: Kitchen Stock
+      if (type === 'master' || type === 'kitchen') {
         doc.setFontSize(12);
-        doc.text("TRAINING CAMP - ITEN, KENYA", 105, 28, { align: 'center' });
-
-        doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.text("OFFICIAL STOCK MOVEMENT STATEMENT", 14, 55);
+        doc.setTextColor(163, 94, 69);
+        doc.text("KITCHEN STOCK LEVELS", 15, currentY);
+        autoTable(doc, {
+          startY: currentY + 5,
+          head: [['Item Name', 'Current Qty', 'Unit', 'Status']],
+          body: stats.kitchenItems.map(i => [i.name, i.quantity, i.unit, i.quantity <= i.reorderLevel ? 'LOW' : 'OPTIMAL']),
+          headStyles: { fillColor: [163, 94, 69] },
+          margin: { left: 15, right: 15 }
+        });
+        currentY = doc.lastAutoTable.finalY + 20;
+      }
+
+      // Section: Gym Equipment
+      if (type === 'master' || type === 'gym') {
+        if (currentY > 240) { doc.addPage(); currentY = 20; }
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(45, 52, 54);
+        doc.text("GYM ASSET STATUS", 15, currentY);
+        autoTable(doc, {
+          startY: currentY + 5,
+          head: [['Asset', 'Qty', 'Condition', 'Last Inspected']],
+          body: stats.gymItems.map(i => [i.name, i.quantity, i.condition, i.lastChecked || 'N/A']),
+          headStyles: { fillColor: [45, 52, 54] },
+          margin: { left: 15, right: 15 }
+        });
+        currentY = doc.lastAutoTable.finalY + 20;
+      }
+
+      // Section: Room Status
+      if (type === 'master' || type === 'rooms') {
+        if (currentY > 240) { doc.addPage(); currentY = 20; }
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(197, 160, 89);
+        doc.text("ROOM OCCUPANCY & ASSETS", 15, currentY);
+        autoTable(doc, {
+          startY: currentY + 5,
+          head: [['Room', 'Type', 'Status', 'Assets Count']],
+          body: stats.rooms.map(r => [
+            r.name, 
+            r.type, 
+            r.status, 
+            stats.roomItems.filter(ri => ri.roomId === r._id).length
+          ]),
+          headStyles: { fillColor: [197, 160, 89] },
+          margin: { left: 15, right: 15 }
+        });
+        currentY = doc.lastAutoTable.finalY + 20;
+      }
+
+      // Section: Issues & Needs
+      if (type === 'master' || type === 'issues') {
+        if (currentY > 240) { doc.addPage(); currentY = 20; }
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(239, 68, 68);
+        doc.text("CRITICAL ISSUES & PROCUREMENT NEEDS", 15, currentY);
         
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 62);
-        doc.text(`Admin: Manager`, 14, 68);
-        doc.text(`Reference: SS-INV-${new Date().getTime().toString().slice(-6)}`, 14, 74);
+        const issues = [
+          ...stats.kitchenItems.filter(i => i.quantity <= i.reorderLevel).map(i => ['Kitchen', i.name, 'Low Stock', 'Restock']),
+          ...stats.gymItems.filter(i => i.condition === 'Maintenance' || i.condition === 'Broken').map(i => ['Gym', i.name, i.condition, 'Repair']),
+          ...stats.rooms.filter(r => r.status === 'Maintenance').map(r => ['Room', r.name, 'Maintenance', 'Fix']),
+          ...stats.procurementNeeds.map(n => [n.department, n.item, `Need: ${n.quantity || '1'}`, n.priority]),
+          ...stats.generalSupplies.filter(s => s.quantity <= s.reorderLevel).map(s => ['Supplies', s.name, 'Low Stock', 'Restock'])
+        ];
 
-        // Inventory Table
         autoTable(doc, {
-            startY: 85,
-            head: [['Item Description', 'Quantity in Stock', 'Status']],
-            body: items.map(i => [
-              i.name || 'Unknown', 
-              `${i.quantity || 0} ${i.unit || ''}`, 
-              (i.quantity || 0) <= (i.reorderLevel || 0) ? 'REORDER' : 'STABLE'
-            ]),
-            theme: 'grid',
-            headStyles: { fillColor: [163, 94, 69] }, // Brand color
-            styles: { fontSize: 9 }
+          startY: currentY + 5,
+          head: [['Department', 'Item / Location', 'Status / Requirement', 'Priority']],
+          body: issues,
+          headStyles: { fillColor: [239, 68, 68] },
+          margin: { left: 15, right: 15 }
         });
+      }
 
-        // Transactions Table
-        const finalY = doc.lastAutoTable?.finalY || 85;
-        doc.setFont('helvetica', 'bold');
-        doc.text("RECENT TRANSACTIONS LOG", 14, finalY + 15);
-        autoTable(doc, {
-            startY: finalY + 20,
-            head: [['Date', 'Type', 'Item Name', 'Qty', 'User']],
-            body: history.slice(0, 500).map(h => [
-                h._creationTime ? new Date(h._creationTime).toLocaleDateString() : 'N/A',
-                h.type || 'N/A',
-                h.itemName || 'Unknown',
-                `${h.type === 'RESTOCK' ? '+' : '-'}${h.quantity || 0} ${h.unit || ''}`,
-                h.person || 'Unknown'
-            ]),
-            theme: 'grid',
-            headStyles: { fillColor: [44, 44, 44] },
-            styles: { fontSize: 8 }
-        });
+      // Footer
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text("CONFIDENTIAL • SWISS SIDE ITEN • PROPERTY OF MANAGEMENT", 105, 285, { align: 'center' });
+      }
 
-        // Footer Contact Information
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-          doc.setPage(i);
-          const pageHeight = doc.internal.pageSize.height;
-          doc.setFontSize(8);
-          doc.setTextColor(150, 150, 150);
-          doc.text("THE SWISS SIDE ITEN | HIGH ALTITUDE TRAINING CAMP | ELEVATION: 2,394M", 105, pageHeight - 20, { align: 'center' });
-          doc.text("Phone: +254 702 000 111 / 0777 699 882 | Email: info@theswissside.com", 105, pageHeight - 15, { align: 'center' });
-          doc.text("Address: Kerio Valley Rd, Lilys Area, Iten, Marakwet, Kenya | theswissside.com", 105, pageHeight - 10, { align: 'center' });
-        }
-
-        doc.save(`Swiss_Side_Statement_${new Date().toISOString().split('T')[0]}.pdf`);
-        setReportStatus('success');
+      doc.save(`Swiss_Side_Report_${type}_${dateStr}.pdf`);
+      setReportStatus('idle');
+      toast.success("Intelligence Report Exported Successfully");
     } catch (err) {
-        console.error(err);
-        toast.error('Failed to generate statement: ' + err.message);
-        setReportStatus('idle');
+      console.error(err);
+      toast.error("Failed to compile report.");
+      setReportStatus('idle');
     }
   };
 
+  const reportCards = [
+    { id: 'master', title: 'Daily Summary', icon: FileText, desc: 'Full operational snapshot for today.', color: 'border-l-slate-900 bg-slate-50' },
+    { id: 'rooms', title: 'Room Status', icon: Bed, desc: 'Occupancy and inventory per room.', color: 'border-l-accent-gold bg-accent-gold/5' },
+    { id: 'gym', title: 'Gym Equipment', icon: Dumbbell, desc: 'Asset condition and maintenance cycles.', color: 'border-l-slate-700 bg-slate-50' },
+    { id: 'kitchen', title: 'Kitchen Stock', icon: ChefHat, desc: 'Consumables and usage trends.', color: 'border-l-primary bg-primary/5' },
+    { id: 'issues', title: 'Issues & Needs', icon: AlertCircle, desc: 'Critical alerts and missing inventory.', color: 'border-l-danger bg-danger/5' },
+  ];
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h1>Reports & Statements</h1>
-        <p className="text-slate-500 text-sm mt-1">Generate professional inventory manifests and audit logs for Swiss Side Iten.</p>
+    <div className="space-y-12 max-w-[1400px] mx-auto animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2 uppercase">Intelligence Reports</h1>
+          <p className="text-slate-500 font-medium max-w-2xl">
+            Generate and export high-fidelity operational statements for stakeholders. 
+            All reports are derived from live departmental audits.
+          </p>
+        </div>
+        <button 
+          onClick={() => generatePDF('master')}
+          disabled={reportStatus === 'generating'}
+          className="btn-primary py-4 px-8 rounded-2xl flex items-center gap-3 shadow-premium hover:scale-[1.02] transition-all"
+        >
+          {reportStatus === 'generating' ? 'Compiling Master...' : <><ShieldCheck size={20} /> Master Executive Export</>}
+        </button>
       </div>
 
-      {/* Simplified Essential Report Section */}
-      <div className="max-w-3xl mx-auto py-12">
-        <div className="system-card p-10 bg-white border-l-8 border-l-primary shadow-xl">
-          <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-               <FileText size={48} />
-            </div>
-            <div className="flex-1 text-center md:text-left">
-              <h2 className="text-2xl font-bold text-slate-900 uppercase tracking-tight mb-2">Download Official Statement</h2>
-              <p className="text-slate-500 mb-6 leading-relaxed">
-                Generate a branded PDF containing current stock levels, low-stock alerts, 
-                and all recent transaction logs for the training camp.
-              </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {reportCards.map((card) => (
+          <div key={card.id} className={`system-card p-10 border-l-8 ${card.color} group hover:shadow-elevated transition-all duration-500`}>
+            <div className="flex flex-col h-full">
+              <div className="p-4 bg-white/50 rounded-2xl w-fit mb-6 shadow-sm border border-white">
+                <card.icon size={32} className="text-slate-700" />
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-900 mb-2 uppercase tracking-tight">{card.title}</h3>
+              <p className="text-slate-500 text-sm mb-8 flex-1">{card.desc}</p>
               <button 
-                onClick={generatePDF}
-                disabled={reportStatus === 'generating'}
-                className="btn-primary py-4 px-8 text-sm font-bold tracking-widest flex items-center justify-center gap-3 w-full md:w-auto"
+                onClick={() => generatePDF(card.id)}
+                className="flex items-center justify-between text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-primary transition-colors group"
               >
-                {reportStatus === 'generating' ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    PROCESSING...
-                  </>
-                ) : (
-                  <>
-                    <Download size={18} />
-                    GENERATE BRANDED PDF
-                  </>
-                )}
+                Compile Report <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
-        </div>
+        ))}
       </div>
 
-      {reportStatus === 'success' && (
-        <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="bg-success/5 border border-success/20 rounded-system p-6 flex items-center gap-6">
-            <div className="w-12 h-12 bg-success/20 text-success rounded-full flex items-center justify-center flex-shrink-0">
-              <CheckCircle2 size={24} />
-            </div>
-            <div>
-              <p className="text-success font-bold uppercase tracking-widest text-xs mb-1">Success</p>
-              <p className="text-slate-700 text-sm">Your official statement has been generated and downloaded.</p>
-            </div>
+      <div className="system-card p-12 bg-slate-900 text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+          <FileText size={160} />
+        </div>
+        <div className="relative z-10 max-w-2xl">
+          <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-[0.3em] mb-4">
+            <Info size={14} /> Compliance & Auditing
+          </div>
+          <h2 className="text-3xl font-extrabold mb-4 uppercase">Automated Asset Intelligence</h2>
+          <p className="text-slate-400 font-medium leading-relaxed mb-8">
+            Swiss Side management reports are cryptographically signed with unique reference IDs. 
+            The system cross-references kitchen consumption with room occupancy to provide 
+            predictive stock requirements and maintenance forecasts.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {['Branded PDF Generation', 'Multi-Department Sync', 'Real-time Stock Snapshot', 'Maintenance Log Inclusion'].map((feature, i) => (
+              <div key={i} className="flex items-center gap-3 text-sm font-bold">
+                <ShieldCheck size={18} className="text-primary" /> {feature}
+              </div>
+            ))}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

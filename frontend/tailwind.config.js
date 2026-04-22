@@ -7,37 +7,54 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['Outfit', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
-        background: '#F5F5F5',
+        background: '#FDFCFB',
         surface: '#FFFFFF',
         primary: {
-          DEFAULT: '#A35E45', // Iten Terracotta from Logo
-          dark: '#8B4E38',
-          light: '#C67C5C',
+          DEFAULT: '#A35E45', // Iten Terracotta
+          dark: '#7A4331',
+          light: '#C98B74',
+          subtle: '#F7EDEA',
         },
-        secondary: '#2C2C2C',
-        success: '#10B981',
-        warning: '#F59E0B',
-        danger: '#EF4444',
-        info: '#3B82F6',
+        accent: {
+          DEFAULT: '#2D3436', // Deep Charcoal
+          gold: '#C5A059',
+        },
+        success: '#27AE60',
+        warning: '#F39C12',
+        danger: '#E74C3C',
+        info: '#3498DB',
+        slate: {
+          50: '#F8FAFC',
+          100: '#F1F5F9',
+          200: '#E2E8F0',
+          300: '#CBD5E1',
+          400: '#94A3B8',
+          500: '#64748B',
+          600: '#475569',
+          700: '#334155',
+          800: '#1E293B',
+          900: '#0F172A',
+        }
       },
       fontSize: {
         'xs-label': ['11px', {
           lineHeight: '1.4',
-          letterSpacing: '0.5px',
-          fontWeight: '500',
+          letterSpacing: '0.08em',
+          fontWeight: '700',
         }],
       },
       boxShadow: {
-        'system': '0 2px 8px rgba(0, 0, 0, 0.1)',
-        'modal': '0 8px 24px rgba(0, 0, 0, 0.15)',
+        'premium': '0 4px 20px -4px rgba(163, 94, 69, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.05)',
+        'elevated': '0 20px 40px -12px rgba(0, 0, 0, 0.1)',
       },
       borderRadius: {
-        'system': '8px',
-        'input': '6px',
-        'modal': '12px',
+        'system': '16px',
+        'input': '12px',
+        'modal': '24px',
       }
     },
   },

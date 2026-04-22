@@ -5,6 +5,28 @@ import bcrypt from "bcryptjs";
 const SUPER_ADMIN_EMAIL = "roychumba16@gmail.com";
 
 /**
+ * INTERNAL HELPER: Verifies a session token and returns the user object.
+ */
+async function checkAuth(ctx: any, token: string, requiredRole?: "super_admin" | "staff") {
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_token", (q: any) => q.eq("token", token))
+    .unique();
+
+  if (!user) throw new Error("Unauthorized: Invalid session token.");
+  
+  if (user.tokenExpiry && user.tokenExpiry < Date.now()) {
+    throw new Error("Session expired. Please log in again.");
+  }
+
+  if (requiredRole && user.role !== requiredRole && user.role !== "super_admin") {
+    throw new Error("Forbidden: You do not have permission for this operation.");
+  }
+
+  return user;
+}
+
+/**
  * Checks if the system is completely empty (no users at all)
  */
 export const isSystemEmpty = query({
@@ -150,7 +172,7 @@ export const requestPasswordReset = mutation({
       resetTokenExpiry: expiry
     });
 
-    return { success: true, token }; // Token will be sent via Email Action
+    return { success: true }; // SECURITY: Never return the token in the response
   }
 });
 
@@ -204,14 +226,7 @@ export const createStaffAccount = mutation({
   },
   handler: async (ctx, args) => {
     // 1. Verify the caller is indeed the Super Admin
-    const admin = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("token"), args.adminToken))
-      .unique();
-
-    if (!admin || admin.role !== "super_admin") {
-      throw new Error("Access Denied: Unauthorzed operation.");
-    }
+    await checkAuth(ctx, args.adminToken, "super_admin");
 
     // 2. Check if user already exists
     const existing = await ctx.db
@@ -240,14 +255,7 @@ export const createStaffAccount = mutation({
 export const listAllUsers = query({
   args: { adminToken: v.string() },
   handler: async (ctx, args) => {
-    const admin = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("token"), args.adminToken))
-      .unique();
-
-    if (!admin || admin.role !== "super_admin") {
-      return [];
-    }
+    await checkAuth(ctx, args.adminToken, "super_admin");
 
     const users = await ctx.db.query("users").collect();
     
@@ -269,14 +277,7 @@ export const removeUser = mutation({
     userId: v.id("users")
   },
   handler: async (ctx, args) => {
-    const admin = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("token"), args.adminToken))
-      .unique();
-
-    if (!admin || admin.role !== "super_admin") {
-       throw new Error("Unauthorized");
-    }
+    await checkAuth(ctx, args.adminToken, "super_admin");
 
     const userToRemove = await ctx.db.get(args.userId);
     if (userToRemove?.email === SUPER_ADMIN_EMAIL) {
@@ -307,19 +308,12 @@ export const getOtpForEmail = query({
 export const verifySession = query({
   args: { token: v.string() },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("token"), args.token))
-      .unique();
-    
-    if (!user) return null;
-
-    // Check for token expiry
-    if (user.tokenExpiry && user.tokenExpiry < Date.now()) {
+    try {
+      const user = await checkAuth(ctx, args.token);
+      return { email: user.email, role: user.role };
+    } catch {
       return null;
     }
-
-    return { email: user.email, role: user.role };
   },
 });
 
@@ -331,7 +325,7 @@ export const logout = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
-      .filter((q) => q.eq(q.field("token"), args.token))
+      .withIndex("by_token", (q: any) => q.eq("token", args.token))
       .unique();
 
     if (user) {

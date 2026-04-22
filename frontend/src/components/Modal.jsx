@@ -21,7 +21,7 @@ export default function Modal({ isOpen, onClose, title, children, footer }) {
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative bg-white w-full max-w-[600px] max-h-[90vh] rounded-modal shadow-modal flex flex-col overflow-hidden"
+          className="relative bg-white w-full max-w-[600px] max-h-[90vh] rounded-[32px] shadow-modal flex flex-col overflow-hidden"
         >
           {/* Header */}
           <div className="px-6 py-6 border-b border-slate-200 flex items-center justify-between bg-white sticky top-0 z-10">

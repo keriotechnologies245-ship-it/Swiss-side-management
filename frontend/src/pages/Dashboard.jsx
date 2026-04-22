@@ -1,347 +1,193 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { format } from 'date-fns';
-import { toast } from 'react-hot-toast';
-import Modal from '../components/Modal';
+import { 
+  ChefHat, 
+  Dumbbell, 
+  Bed, 
+  Package,
+  TrendingUp, 
+  AlertCircle, 
+  CheckCircle2,
+  ArrowRight,
+  Clock,
+  Info
+} from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
-  const [isAddStockModalOpen, setIsAddStockModalOpen] = useState(false);
   
-  // Convex Hooks (Realtime by default!)
-  const items = useQuery(api.items.getAll);
-  const rawHistory = useQuery(api.transactions.getHistory);
-  const withdrawMutation = useMutation(api.transactions.withdraw);
-  const restockMutation = useMutation(api.transactions.restock);
+  // Department Data
+  const kitchenItems = useQuery(api.items.getAll);
+  const gymItems = useQuery(api.gymItems.getAll);
+  const rooms = useQuery(api.rooms.getAll);
+  const generalSupplies = useQuery(api.generalSupplies.getAll);
+  const kitchenHistory = useQuery(api.transactions.getHistory);
 
-  // Form States
-  const [formLoading, setFormLoading] = useState(false);
-  const [formData, setFormData] = useState({ itemId: '', quantity: '', staffName: '', source: '', notes: '' });
-  const [userName] = useState('Manager'); // In a real app, get this from Auth
+  const stats = useMemo(() => {
+    if (!kitchenItems || !gymItems || !rooms || !generalSupplies) return null;
 
-  // Filter history for today
-  const history = useMemo(() => {
-    if (!rawHistory) return [];
-    const todayStr = new Date().toDateString();
-    return rawHistory.filter(h => new Date(h._creationTime).toDateString() === todayStr);
-  }, [rawHistory]);
+    return {
+      kitchen: {
+        total: kitchenItems.length,
+        lowStock: kitchenItems.filter(i => i.quantity <= i.reorderLevel).length,
+      },
+      gym: {
+        total: gymItems.length,
+        maintenance: gymItems.filter(i => i.condition === 'Maintenance' || i.condition === 'Broken').length,
+      },
+      rooms: {
+        total: rooms.length,
+        ready: rooms.filter(r => r.status === 'Ready').length,
+        maintenance: rooms.filter(r => r.status === 'Maintenance').length,
+      },
+      supplies: {
+        total: generalSupplies.length,
+        lowStock: generalSupplies.filter(s => s.quantity <= s.reorderLevel).length,
+      }
+    };
+  }, [kitchenItems, gymItems, rooms, generalSupplies]);
 
-  const handleWithdraw = async (e) => {
-    e.preventDefault();
-    if (!formData.itemId || !formData.quantity) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-    setFormLoading(true);
-    try {
-      await withdrawMutation({
-        itemId: formData.itemId,
-        quantity: parseFloat(formData.quantity),
-        person: formData.staffName || userName,
-        notes: formData.notes
-      });
-      toast.success('Withdrawal logged successfully');
-      setIsWithdrawModalOpen(false);
-      setFormData({ itemId: '', quantity: '', staffName: '', source: '', notes: '' });
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const handleAddStock = async (e) => {
-    e.preventDefault();
-    if (!formData.itemId || !formData.quantity) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-    setFormLoading(true);
-    try {
-      await restockMutation({
-        itemId: formData.itemId,
-        quantity: parseFloat(formData.quantity),
-        person: formData.source || userName,
-        notes: formData.notes
-      });
-      toast.success('Stock added successfully');
-      setIsAddStockModalOpen(false);
-      setFormData({ itemId: '', quantity: '', staffName: '', source: '', notes: '' });
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const selectedItem = useMemo(() => 
-    items?.find(i => i._id === formData.itemId),
-    [items, formData.itemId]
+  if (!stats) return (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-slate-400 font-mono text-xs uppercase tracking-[0.2em] animate-pulse">
+        Accessing Intelligence Core...
+      </div>
+    </div>
   );
 
-  if (items === undefined || rawHistory === undefined) {
-    return <div className="p-8 font-mono text-slate-500 uppercase tracking-widest text-xs animate-pulse">Initializing System...</div>;
-  }
-
-  const lowStockCount = items.filter(i => i.quantity > 0 && i.quantity <= i.reorderLevel).length;
-
   return (
-    <div className="space-y-6">
-      
-      {/* Greeting Section */}
-      <div className="bg-gradient-to-r from-primary/5 to-transparent p-6 rounded-system border border-primary/10">
-        <h2 className="text-slate-900 capitalize">Good morning, {userName}</h2>
-        <div className="flex items-center gap-4 mt-1">
-          <p className="text-xs-label text-slate-500">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
-          <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
-          <p className="text-xs-label text-slate-500">{format(new Date(), 'hh:mm a')}</p>
+    <div className="space-y-12 max-w-[1600px] mx-auto animate-in fade-in duration-700">
+      {/* Executive Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 pb-10">
+        <div>
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2 uppercase">Swiss Side Iten</h1>
+          <p className="text-slate-500 font-medium max-w-2xl">
+            Operational Overview Dashboard. Real-time departmental metrics and facility readiness.
+          </p>
         </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="system-card p-6 text-center">
-          <p className="text-xs-label text-slate-400 mb-2 uppercase tracking-widest">Total Items</p>
-          <p className="text-3xl font-bold text-slate-900">{items.length}</p>
-          <p className="text-[12px] text-slate-500 mt-1">Items tracked</p>
-        </div>
-        <div className="system-card p-6 text-center">
-          <p className="text-xs-label text-slate-400 mb-2 uppercase tracking-widest">Low Stock</p>
-          <p className={`text-3xl font-bold ${lowStockCount > 0 ? 'text-danger' : 'text-success'}`}>{lowStockCount}</p>
-          <p className="text-[12px] text-slate-500 mt-1">Items need restock</p>
-        </div>
-        <div className="system-card p-6 text-center">
-          <p className="text-xs-label text-slate-400 mb-2 uppercase tracking-widest">Today</p>
-          <p className="text-3xl font-bold text-slate-900">{history.length}</p>
-          <p className="text-[12px] text-slate-500 mt-1">Transactions</p>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-4">
-        <button
-          onClick={() => setIsWithdrawModalOpen(true)}
-          className="h-[56px] rounded-system border-2 border-primary text-primary font-bold hover:bg-primary hover:text-white transition-all uppercase tracking-wider text-xs"
-        >
-          Log Withdrawal
-        </button>
-        <button
-          onClick={() => setIsAddStockModalOpen(true)}
-          className="h-[56px] rounded-system bg-primary text-white font-bold hover:bg-primary-dark transition-all uppercase tracking-wider text-xs shadow-sm"
-        >
-          Add Stock
-        </button>
-      </div>
-
-      {/* Current Stock Levels */}
-      <div className="system-card">
-        <div className="px-6 py-4 border-b-2 border-slate-100 bg-slate-50/50">
-          <h4 className="text-xs-label font-bold text-slate-500 uppercase tracking-widest">Current Stock Levels</h4>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 text-[12px] font-bold text-slate-500 uppercase">
-                <th className="px-6 py-3">Item</th>
-                <th className="px-6 py-3">Current</th>
-                <th className="px-6 py-3">Reorder</th>
-                <th className="px-6 py-3 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {items.map((item) => {
-                const isOut = item.quantity === 0;
-                const isLow = item.quantity > 0 && item.quantity <= item.reorderLevel;
-                return (
-                  <tr key={item._id} className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => navigate('/inventory')}>
-                    <td className="px-6 py-4 font-semibold text-slate-900">{item.name}</td>
-                    <td className="px-6 py-4 text-slate-600 font-mono text-sm">{item.quantity} {item.unit}</td>
-                    <td className="px-6 py-4 text-slate-400 font-mono text-sm">{item.reorderLevel} {item.unit}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`status-badge ${isOut ? 'status-out' : isLow ? 'status-low' : 'status-ok'}`}>
-                        {isOut ? 'Out' : isLow ? 'Low' : 'OK'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Today's Transactions */}
-      <div className="system-card">
-        <div className="px-6 py-4 border-b-2 border-slate-100 bg-slate-50/50">
-          <h4 className="text-xs-label font-bold text-slate-500 uppercase tracking-widest">Today's Transactions</h4>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 text-[12px] font-bold text-slate-500 uppercase">
-                <th className="px-6 py-3">Time</th>
-                <th className="px-6 py-3">Item</th>
-                <th className="px-6 py-3">Type</th>
-                <th className="px-6 py-3">Qty</th>
-                <th className="px-6 py-3 text-right">Person</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {history.length === 0 ? (
-                <tr><td colSpan="5" className="px-6 py-8 text-center text-slate-400 font-mono text-xs uppercase tracking-widest">No transactions logged today</td></tr>
-              ) : (
-                history.map((h) => (
-                  <tr key={h._id} className="hover:bg-slate-50/50">
-                    <td className="px-6 py-4 text-slate-400 font-mono text-xs italic">{format(new Date(h._creationTime), 'hh:mm a')}</td>
-                    <td className="px-6 py-4 font-semibold text-slate-900">{h.itemName}</td>
-                    <td className={`px-6 py-4 text-[11px] font-bold uppercase ${h.type === 'RESTOCK' ? 'text-success' : 'text-danger'}`}>{h.type}</td>
-                    <td className={`px-6 py-4 font-bold font-mono text-sm ${h.type === 'RESTOCK' ? 'text-success' : 'text-danger'}`}>
-                      {h.type === 'RESTOCK' ? '+' : '-'}{h.quantity} {h.unit}
-                    </td>
-                    <td className="px-6 py-4 text-slate-500 text-right font-medium">{h.person}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* --- MODALS --- */}
-
-      {/* Log Withdrawal Modal */}
-      <Modal 
-        isOpen={isWithdrawModalOpen} 
-        onClose={() => setIsWithdrawModalOpen(false)}
-        title="Log Withdrawal"
-        footer={(
-          <>
-            <button onClick={() => setIsWithdrawModalOpen(false)} className="btn-secondary">Cancel</button>
-            <button onClick={handleWithdraw} disabled={formLoading} className="btn-primary">
-              {formLoading ? 'Saving...' : 'Log Withdrawal'}
-            </button>
-          </>
-        )}
-      >
-        <div className="space-y-5">
-          <div>
-            <label className="block text-xs-label text-slate-500 uppercase mb-2">Select Item</label>
-            <select 
-              className="input-field"
-              value={formData.itemId}
-              onChange={e => setFormData({...formData, itemId: e.target.value})}
-            >
-              <option value="">Select an item...</option>
-              {items.map(i => <option key={i._id} value={i._id}>{i.name} ({i.quantity} {i.unit} available)</option>)}
-            </select>
+        <div className="flex items-center gap-3 bg-white px-6 py-3 rounded-2xl shadow-premium border border-slate-50">
+          <Clock className="text-primary" size={20} />
+          <div className="text-right">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">System Health</p>
+            <p className="text-sm font-bold text-slate-900 leading-none">Operational • Live Data</p>
           </div>
-          {selectedItem && (
-            <div className="bg-slate-50 p-3 rounded-input text-sm text-slate-500 flex justify-between">
-              <span>Current Stock: <strong className="text-slate-900">{selectedItem.quantity} {selectedItem.unit}</strong></span>
-              <span>Reorder Level: <strong className="text-slate-900">{selectedItem.reorderLevel} {selectedItem.unit}</strong></span>
+        </div>
+      </div>
+
+      {/* Primary Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          { label: 'Kitchen Items', value: stats.kitchen.total, icon: ChefHat, color: 'text-primary bg-primary/5' },
+          { label: 'Gym Assets', value: stats.gym.total, icon: Dumbbell, color: 'text-slate-700 bg-slate-50' },
+          { label: 'Rooms Tracked', value: stats.rooms.total, icon: Bed, color: 'text-accent-gold bg-accent-gold/5' },
+          { label: 'General Supplies', value: stats.supplies.total, icon: Package, color: 'text-slate-500 bg-slate-50' },
+        ].map((card, i) => (
+          <div key={i} className="system-card p-6 bg-white border border-slate-50 flex items-center justify-between hover:scale-[1.02] transition-all">
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{card.label}</p>
+              <p className="text-3xl font-black text-slate-900">{card.value}</p>
             </div>
-          )}
-          <div>
-            <label className="block text-xs-label text-slate-500 uppercase mb-2">Quantity to Withdraw</label>
-            <div className="relative">
-              <input 
-                type="number" 
-                className="input-field"
-                value={formData.quantity}
-                onChange={e => setFormData({...formData, quantity: e.target.value})}
-                placeholder="0.00"
-              />
-              {selectedItem && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold uppercase text-[10px]">{selectedItem.unit}</span>}
+            <div className={`p-4 rounded-2xl ${card.color}`}>
+              <card.icon size={24} />
             </div>
           </div>
-          <div>
-            <label className="block text-xs-label text-slate-500 uppercase mb-2">Staff Member</label>
-            <input 
-              type="text" 
-              className="input-field"
-              value={formData.staffName}
-              onChange={e => setFormData({...formData, staffName: e.target.value})}
-              placeholder="Enter name"
-            />
-          </div>
-          <div>
-            <label className="block text-xs-label text-slate-500 uppercase mb-2">Purpose (Optional)</label>
-            <input 
-              type="text" 
-              className="input-field"
-              value={formData.notes}
-              onChange={e => setFormData({...formData, notes: e.target.value})}
-              placeholder="e.g. Breakfast prep"
-            />
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        {/* Alerts & Notifications */}
+        <div className="system-card p-10 bg-white">
+          <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3 uppercase tracking-tight">
+            <AlertCircle size={20} className="text-danger" /> Alerts & Notifications
+          </h3>
+          <div className="space-y-4">
+            {stats.kitchen.lowStock > 0 && (
+              <div className="flex items-center gap-4 p-4 bg-danger/5 border border-danger/10 rounded-2xl">
+                <div className="w-2 h-2 bg-danger rounded-full animate-pulse"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-slate-900">Kitchen: {stats.kitchen.lowStock} Items Low Stock</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inventory Restock Required</p>
+                </div>
+              </div>
+            )}
+            {stats.gym.maintenance > 0 && (
+              <div className="flex items-center gap-4 p-4 bg-warning/5 border border-warning/10 rounded-2xl">
+                <div className="w-2 h-2 bg-warning rounded-full"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-slate-900">Gym: {stats.gym.maintenance} Equipment Issues</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Maintenance Action Pending</p>
+                </div>
+              </div>
+            )}
+            {stats.rooms.maintenance > 0 && (
+              <div className="flex items-center gap-4 p-4 bg-primary/5 border border-primary/10 rounded-2xl">
+                <div className="w-2 h-2 bg-primary rounded-full"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-slate-900">Rooms: {stats.rooms.maintenance} Units Under Repair</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lodge Capacity Reduced</p>
+                </div>
+              </div>
+            )}
+            {stats.kitchen.lowStock === 0 && stats.gym.maintenance === 0 && stats.rooms.maintenance === 0 && (
+              <div className="flex flex-col items-center justify-center py-10 opacity-30">
+                <CheckCircle2 size={48} className="mb-4" />
+                <p className="text-sm font-bold uppercase tracking-widest">All Systems Optimal</p>
+              </div>
+            )}
           </div>
         </div>
-      </Modal>
 
-      {/* Add Stock Modal */}
-      <Modal 
-        isOpen={isAddStockModalOpen} 
-        onClose={() => setIsAddStockModalOpen(false)}
-        title="Add Stock (Restock)"
-        footer={(
-          <>
-            <button onClick={() => setIsAddStockModalOpen(false)} className="btn-secondary">Cancel</button>
-            <button onClick={handleAddStock} disabled={formLoading} className="btn-primary">
-              {formLoading ? 'Adding...' : 'Add Stock'}
-            </button>
-          </>
-        )}
-      >
-        <div className="space-y-5">
-          <div>
-            <label className="block text-xs-label text-slate-500 uppercase mb-2">Select Item</label>
-            <select 
-              className="input-field"
-              value={formData.itemId}
-              onChange={e => setFormData({...formData, itemId: e.target.value})}
-            >
-              <option value="">Select an item...</option>
-              {items.map(i => <option key={i._id} value={i._id}>{i.name} (Current: {i.quantity} {i.unit})</option>)}
-            </select>
+        {/* Recent Activity */}
+        <div className="system-card p-10 bg-white">
+          <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3 uppercase tracking-tight">
+            <Clock size={20} className="text-primary" /> Recent Intelligence
+          </h3>
+          <div className="space-y-6">
+            {kitchenHistory?.slice(0, 5).map((h) => (
+              <div key={h._id} className="flex items-center justify-between pb-6 border-b border-slate-50 last:border-0 last:pb-0">
+                <div className="flex items-center gap-4">
+                  <div className={`p-2 rounded-lg ${h.type === 'RESTOCK' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
+                    <Info size={16} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">{h.itemName}</p>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black">{h.type} • {h.person}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className={`text-sm font-black ${h.type === 'RESTOCK' ? 'text-success' : 'text-danger'}`}>
+                    {h.type === 'RESTOCK' ? '+' : '-'}{h.quantity} {h.unit}
+                  </p>
+                  <p className="text-[10px] text-slate-300 font-bold uppercase">{new Date(h._creationTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                </div>
+              </div>
+            ))}
           </div>
-          <div>
-            <label className="block text-xs-label text-slate-500 uppercase mb-2">Quantity to Add</label>
-            <div className="relative">
-              <input 
-                type="number" 
-                className="input-field"
-                value={formData.quantity}
-                onChange={e => setFormData({...formData, quantity: e.target.value})}
-                placeholder="0.00"
-              />
-              {selectedItem && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold uppercase text-[10px]">{selectedItem.unit}</span>}
+        </div>
+      </div>
+
+      {/* Quick Access Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 pb-10">
+        {[
+          { title: 'Kitchen', path: '/inventory', icon: ChefHat },
+          { title: 'Gym', path: '/gym-inventory', icon: Dumbbell },
+          { title: 'Rooms', path: '/rooms', icon: Bed },
+          { title: 'Supplies', path: '/general-supplies', icon: Package },
+        ].map((hub, i) => (
+          <button 
+            key={i}
+            onClick={() => navigate(hub.path)}
+            className="group flex flex-col items-center p-8 bg-white border border-slate-100 rounded-[32px] hover:border-primary transition-all shadow-sm hover:shadow-premium"
+          >
+            <div className="p-4 bg-slate-50 rounded-2xl text-slate-400 group-hover:bg-primary group-hover:text-white transition-all mb-4">
+              <hub.icon size={24} />
             </div>
-          </div>
-          <div>
-            <label className="block text-xs-label text-slate-500 uppercase mb-2">Source/Supplier</label>
-            <input 
-              type="text" 
-              className="input-field uppercase"
-              value={formData.source}
-              onChange={e => setFormData({...formData, source: e.target.value})}
-              placeholder="e.g. Nakumatt Wholesale"
-            />
-          </div>
-          <div>
-            <label className="block text-xs-label text-slate-500 uppercase mb-2">Invoice/Reference (Optional)</label>
-            <input 
-              type="text" 
-              className="input-field"
-              value={formData.notes}
-              onChange={e => setFormData({...formData, notes: e.target.value})}
-              placeholder="e.g. Invoice #1234"
-            />
-          </div>
-        </div>
-      </Modal>
-
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-900">{hub.title}</p>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

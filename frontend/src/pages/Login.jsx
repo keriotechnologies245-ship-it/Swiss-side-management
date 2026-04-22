@@ -81,106 +81,151 @@ export default function Login() {
   if (isSystemEmpty === undefined) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 bg-gradient-to-b from-slate-100 to-white font-sans">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans selection:bg-primary/20">
       <Toaster position="top-right" />
       
-      <div className="text-center mb-8">
-        <div className="w-[96px] h-[96px] bg-white rounded-full mx-auto mb-6 flex items-center justify-center overflow-hidden border-4 border-primary shadow-lg ring-4 ring-primary/20">
-          <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
-        </div>
-        <h1 className="text-slate-900 uppercase tracking-widest text-base font-black">The Swiss Side</h1>
-        <p className="text-slate-500 text-[9px] font-bold uppercase mt-1 tracking-widest opacity-80">
-          {isSystemEmpty ? "System Root Ownership" : 
-           mode.startsWith('forgot') ? "Emergency Recover Flow" :
-           mode === 'otp' ? "Two-Factor Verification" : "Authenticated Workspace"}
-        </p>
+      {/* Background Decorative Element */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px]"></div>
+        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] rounded-full bg-accent-gold/5 blur-[120px]"></div>
       </div>
 
-      <motion.div animate={controls} className="w-full max-w-[380px] bg-white rounded-system shadow-system p-8 border border-slate-200">
-          <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="w-full max-w-[440px] relative z-10">
+        <div className="text-center mb-10">
+          <div className="w-[100px] h-[100px] bg-white rounded-3xl mx-auto mb-8 flex items-center justify-center overflow-hidden shadow-elevated border border-slate-100 ring-8 ring-white">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+          </div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-2">Swiss Side</h1>
+          <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] opacity-80">Executive Portal</p>
+        </div>
+
+        <motion.div animate={controls} className="bg-white rounded-[32px] shadow-elevated p-10 border border-slate-100 relative overflow-hidden group">
+          <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-primary via-primary/50 to-primary"></div>
+          
+          <div className="mb-8">
+            <h2 className="text-lg font-bold text-slate-900 mb-1">
+              {isSystemEmpty ? "Initialize Root System" : 
+               mode.startsWith('forgot') ? "Emergency Access Recovery" :
+               mode === 'otp' ? "Dual-Factor Verification" : "Authorize Session"}
+            </h2>
+            <p className="text-xs font-medium text-slate-400">
+              {mode === 'signIn' ? "Enter your credentials to access the lodge manager." : "Security protocols active. Please follow the instructions."}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
             {mode !== 'otp' && mode !== 'forgot_reset' && (
-              <div>
-                <label className="label-text">Email</label>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Identifier</label>
                 <div className="relative">
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="input-field pl-10" placeholder="admin@theswissside.com" required autoFocus />
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                  <input 
+                    type="email" 
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)} 
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-6 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all outline-none" 
+                    placeholder="manager@theswissside.com" 
+                    required 
+                    autoFocus 
+                  />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                 </div>
               </div>
             )}
 
             {mode === 'signIn' || isSystemEmpty ? (
-              <div className="relative">
-                <label className="label-text">Password</label>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Security Key</label>
                 <div className="relative">
-                  <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="input-field pr-12" placeholder="••••••••" required />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-all">
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    value={password} 
+                    onChange={e => setPassword(e.target.value)} 
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-12 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all outline-none" 
+                    placeholder="••••••••" 
+                    required 
+                  />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-primary transition-all">
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
             ) : null}
 
             {mode === 'otp' && (
-              <div className="space-y-4">
-                <div className="p-4 bg-slate-50 rounded-md border border-slate-100 text-center">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Enter Code Sent to</p>
-                  <p className="text-xs font-mono text-slate-700 font-bold">{email}</p>
+              <div className="space-y-6">
+                <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Verify Identity</p>
+                  <p className="text-sm font-mono text-slate-700 font-bold">{email}</p>
                 </div>
-                <input type="text" maxLength={6} value={otp} onChange={e => setOtp(e.target.value)} className="input-field font-mono tracking-[1em] text-center text-lg" placeholder="000000" required autoFocus />
-                <button type="button" onClick={() => setMode('signIn')} className="w-full text-[10px] text-slate-400 hover:text-primary font-bold uppercase">Back to Password</button>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 text-center block">6-Digit Access Code</label>
+                  <input 
+                    type="text" 
+                    maxLength={6} 
+                    value={otp} 
+                    onChange={e => setOtp(e.target.value)} 
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-5 text-center text-2xl font-black tracking-[0.8em] font-mono focus:bg-white transition-all outline-none" 
+                    placeholder="000000" 
+                    required 
+                    autoFocus 
+                  />
+                </div>
+                <button type="button" onClick={() => setMode('signIn')} className="w-full text-[10px] text-slate-400 hover:text-primary font-black uppercase tracking-widest">Abort & Retry</button>
               </div>
             )}
 
             {mode === 'forgot_reset' && (
-              <div className="space-y-4">
-                <div className="p-4 bg-red-50 rounded-md border border-red-100 text-center">
-                  <ShieldAlert className="mx-auto text-red-500 mb-2" size={20} />
-                  <p className="text-[10px] text-red-800 font-bold uppercase tracking-widest">Reset Protocol</p>
+              <div className="space-y-6">
+                <div className="p-5 bg-danger/5 rounded-2xl border border-danger/10 text-center">
+                  <ShieldAlert className="mx-auto text-danger mb-2" size={24} />
+                  <p className="text-[10px] text-danger font-black uppercase tracking-widest">Authorization Protocol</p>
                 </div>
-                <div>
-                  <label className="label-text">6-Digit Security Token (from email)</label>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Security Token</label>
                   <input 
                     type="text" 
                     maxLength={6}
                     value={resetToken} 
                     onChange={e => setResetToken(e.target.value)} 
-                    className="input-field font-mono tracking-[1em] text-center text-lg" 
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 text-center text-xl font-mono tracking-[0.5em] focus:bg-white transition-all outline-none" 
                     placeholder="000000" 
                     required 
                   />
                 </div>
-                <div>
-                  <label className="label-text">New Password</label>
-                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-field" placeholder="••••••••" required />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Define New Password</label>
+                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-6 text-sm font-medium transition-all outline-none" placeholder="••••••••" required />
                 </div>
               </div>
             )}
 
-            <button type="submit" disabled={loading} className="btn-primary w-full uppercase tracking-wider text-[11px] h-[48px] flex items-center justify-center gap-2 font-black">
-               {loading ? 'Processing...' : 
-                isSystemEmpty ? 'Root System Setup' : 
-                mode === 'otp' ? 'Complete Verification' :
-                mode === 'forgot_request' ? 'Request Reset Token' :
-                mode === 'forgot_reset' ? 'Finalize Password Change' : 'Unlock Workspace'}
+            <button type="submit" disabled={loading} className="btn-primary w-full py-5 rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest shadow-premium hover:scale-[1.02] active:scale-[0.98] transition-all">
+               {loading ? 'Processing Identity...' : 
+                isSystemEmpty ? 'Setup Root Identity' : 
+                mode === 'otp' ? 'Finalize Verification' :
+                mode === 'forgot_request' ? 'Request Recovery Token' :
+                mode === 'forgot_reset' ? 'Authorize Update' : 'Initialize Session'}
             </button>
 
             {!isSystemEmpty && mode === 'signIn' && (
-              <button type="button" onClick={() => setMode('forgot_request')} className="w-full text-center text-[10px] text-slate-400 hover:text-primary uppercase tracking-widest font-bold transition-colors">
-                Forgot Password?
+              <button type="button" onClick={() => setMode('forgot_request')} className="w-full text-center text-[10px] text-slate-400 hover:text-primary uppercase tracking-[0.2em] font-black transition-colors">
+                Lost access credentials?
               </button>
             )}
 
             {!isSystemEmpty && mode.startsWith('forgot') && (
-              <button type="button" onClick={() => setMode('signIn')} className="w-full text-center text-[10px] text-slate-400 hover:text-primary uppercase tracking-widest font-bold transition-colors">
-                Back to Login
+              <button type="button" onClick={() => setMode('signIn')} className="w-full text-center text-[10px] text-slate-400 hover:text-primary uppercase tracking-[0.2em] font-black transition-colors">
+                Return to Login
               </button>
             )}
           </form>
-      </motion.div>
+        </motion.div>
 
-      <div className="mt-8 flex items-center gap-2 opacity-50 grayscale hover:grayscale-0 transition-all cursor-help">
-        <div className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
-        <p className="text-[10px] font-mono uppercase text-slate-500 tracking-tighter">Bcrypt Encryption Active | Token Recovery Enabled</p>
+        <div className="mt-12 flex items-center justify-center gap-3 opacity-40 hover:opacity-100 transition-all cursor-help grayscale hover:grayscale-0">
+          <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_10px_rgba(163,94,69,0.5)]"></div>
+          <p className="text-[10px] font-black uppercase text-slate-500 tracking-[0.1em]">Encrypted Session • AES-256 Protocol</p>
+        </div>
       </div>
     </div>
   );

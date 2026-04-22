@@ -49,60 +49,73 @@ export default function Settings() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="pb-6 border-b border-slate-200">
-        <h1>Settings & Security</h1>
-        <p className="text-slate-500 text-sm mt-1">Manage your profile and team authorization.</p>
+    <div className="space-y-12 animate-in fade-in duration-700 max-w-[1400px] mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-10">
+        <div>
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">System Configuration</h1>
+          <p className="text-slate-500 font-medium">Manage user authorization and facility security protocols.</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
         {/* Profile Settings */}
-        <div className="system-card p-8">
-          <div className="flex items-center gap-3 mb-6 border-b pb-4">
-              <ShieldCheck className="text-primary" size={24} />
-              <h3 className="text-base font-bold text-slate-800 uppercase tracking-tight">Your Profile</h3>
+        <div className="system-card bg-white p-10 shadow-premium border border-slate-50">
+          <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                <ShieldCheck size={28} />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Security Clearance</h3>
           </div>
-          <div className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <label className="block text-xs-label text-slate-500 uppercase mb-2">Display Name</label>
-                <input type="text" className="input-field bg-slate-50 border-slate-100" defaultValue={userEmail.split('@')[0]} readOnly />
+                <label className="block text-xs-label text-slate-400 uppercase mb-3">Operating As</label>
+                <div className="input-field bg-slate-50 border-slate-100 flex items-center font-bold text-slate-900">
+                  {userEmail.split('@')[0]}
+                </div>
               </div>
               <div>
-                <label className="block text-xs-label text-slate-500 uppercase mb-2">Role权限</label>
-                <input type="text" className="input-field bg-slate-50 border-slate-100 font-bold text-primary" value={userRole.replace('_', ' ')} readOnly />
+                <label className="block text-xs-label text-slate-400 uppercase mb-3">Access Level</label>
+                <div className="input-field bg-slate-50 border-slate-100 flex items-center font-black text-primary uppercase tracking-widest">
+                  {userRole.replace('_', ' ')}
+                </div>
               </div>
             </div>
             <div>
-              <label className="block text-xs-label text-slate-500 uppercase mb-2">Authenticated Email</label>
-              <input type="email" className="input-field bg-slate-50 border-slate-100" value={userEmail} readOnly />
+              <label className="block text-xs-label text-slate-400 uppercase mb-3">Authorized Email Address</label>
+              <div className="input-field bg-slate-50 border-slate-100 flex items-center font-medium text-slate-600">
+                {userEmail}
+              </div>
             </div>
           </div>
         </div>
 
         {/* STAFF MANAGEMENT (Admin Only) */}
         {isAdmin && (
-          <div className="system-card p-8 border-l-4 border-l-primary">
-            <div className="flex items-center gap-3 mb-6 border-b pb-4">
-                <Users className="text-primary" size={24} />
-                <h3 className="text-base font-bold text-slate-800 uppercase tracking-tight">Staff Account Management</h3>
+          <div className="system-card bg-white p-10 shadow-premium border border-slate-50 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-full pointer-events-none"></div>
+            <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white">
+                  <Users size={24} />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Team Authorization</h3>
             </div>
             
             {/* Add Staff Member */}
-            <form onSubmit={handleCreateStaff} className="bg-slate-50 p-4 rounded-system border border-slate-100 mb-6 space-y-4">
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Issue New Credentials</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <form onSubmit={handleCreateStaff} className="bg-slate-50/50 p-6 rounded-[24px] border border-slate-100 mb-10 space-y-5">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Issue New Staff Access</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input 
                       type="email" 
-                      placeholder="Staff Email" 
-                      className="input-field h-[40px] text-sm"
+                      placeholder="Corporate Email" 
+                      className="input-field h-12 text-sm bg-white"
                       value={newStaffEmail}
                       onChange={e => setNewStaffEmail(e.target.value)}
                     />
                     <input 
                       type="password" 
-                      placeholder="Temp Password" 
-                      className="input-field h-[40px] text-sm"
+                      placeholder="Access Token" 
+                      className="input-field h-12 text-sm bg-white"
                       value={newStaffPass}
                       onChange={e => setNewStaffPass(e.target.value)}
                     />
@@ -110,31 +123,36 @@ export default function Settings() {
                 <button 
                   type="submit" 
                   disabled={adding}
-                  className="btn-primary w-full h-[40px] flex items-center justify-center gap-2 text-xs"
+                  className="btn-primary w-full h-12 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-sm hover:shadow-premium"
                 >
-                    <UserPlus size={16} /> {adding ? 'Creating...' : 'Register New Staff'}
+                    <UserPlus size={18} /> {adding ? 'Authorizing...' : 'Register Account'}
                 </button>
             </form>
 
             {/* List of Users */}
-            <div className="space-y-3">
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Active Accounts</p>
+            <div className="space-y-4">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Active Facility Access</p>
                 {allUsers === undefined ? (
-                    <div className="p-4 text-center animate-pulse text-xs text-slate-400 font-mono">Loading user list...</div>
+                    <div className="p-8 text-center animate-pulse text-[10px] text-slate-300 font-black uppercase tracking-widest">Synchronizing Accounts...</div>
                 ) : (
-                    <div className="divide-y divide-slate-100 border rounded-system overflow-hidden">
+                    <div className="divide-y divide-slate-50 border border-slate-50 rounded-[24px] overflow-hidden bg-white">
                         {allUsers.map(user => (
-                            <div key={user._id} className="flex items-center justify-between p-4 bg-white hover:bg-slate-50/50 transition-colors">
-                                <div>
-                                    <p className="text-sm font-bold text-slate-800">{user.email}</p>
-                                    <p className="text-[10px] uppercase font-bold text-slate-400 mt-1">Role: {user.role}</p>
+                            <div key={user._id} className="flex items-center justify-between p-5 hover:bg-slate-50/50 transition-colors">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 font-bold">
+                                    {user.email.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                      <p className="text-sm font-bold text-slate-900">{user.email}</p>
+                                      <p className="text-[9px] uppercase font-black text-primary tracking-widest mt-0.5">{user.role}</p>
+                                  </div>
                                 </div>
                                 {user.role !== 'super_admin' && (
                                     <button 
                                       onClick={() => handleRemoveUser(user._id, user.email)}
-                                      className="p-2 text-slate-300 hover:text-danger hover:bg-danger/10 rounded-md transition-all"
+                                      className="p-3 text-slate-300 hover:text-danger hover:bg-danger/5 rounded-xl transition-all"
                                     >
-                                        <Trash2 size={16} />
+                                        <Trash2 size={18} />
                                     </button>
                                 )}
                             </div>

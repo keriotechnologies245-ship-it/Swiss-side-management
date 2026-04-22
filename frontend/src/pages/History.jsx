@@ -22,113 +22,98 @@ export default function Transactions() {
     return matchesItem && matchesType && matchesSearch;
   });
 
-  if (history === undefined || items === undefined) return <div className="p-8 font-mono text-slate-500 uppercase tracking-widest text-xs">Fetching Ledgers...</div>;
+  if (history === undefined || items === undefined) return <div className="p-12 font-mono text-slate-400 uppercase tracking-widest text-xs animate-pulse text-center">Reading Audit Logs...</div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200">
+    <div className="space-y-10 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1>Transaction History</h1>
-          <p className="text-slate-500 text-sm mt-1">Audit trail of all inventory movements.</p>
-        </div>
-        <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-system">
-             <span className="text-[11px] font-bold text-slate-500 px-3 uppercase tracking-wider">Date Range:</span>
-             <select 
-               className="bg-white border border-slate-200 rounded-md py-1.5 px-3 text-sm font-medium focus:outline-none"
-               value={filters.dateRange}
-               onChange={e => setFilters({...filters, dateRange: e.target.value})}
-             >
-                <option value="today">Today</option>
-                <option value="yesterday">Yesterday</option>
-                <option value="7days">Last 7 Days</option>
-                <option value="month">This Month</option>
-                <option value="all">All Time</option>
-             </select>
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">Operational Audit Logs</h1>
+          <p className="text-slate-500 font-medium max-w-2xl">A high-fidelity trail of all facility movements and personnel actions.</p>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-system border border-slate-200 flex flex-wrap gap-4 items-center">
-        <div className="flex-1 min-w-[200px] relative">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-center bg-white p-6 rounded-[32px] shadow-sm border border-slate-100">
+        <div className="lg:col-span-2 relative">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input 
                 type="text" 
-                placeholder="Search staff or item..." 
-                className="input-field pl-10 h-[40px]"
+                placeholder="Search by personnel or item name..." 
+                className="w-full bg-slate-50/50 border border-slate-100 rounded-2xl py-4 pl-12 pr-6 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all outline-none"
                 value={filters.search}
                 onChange={e => setFilters({...filters, search: e.target.value})}
             />
         </div>
         
         <select 
-            className="h-[40px] border border-slate-200 rounded-md px-4 text-sm font-medium focus:outline-primary focus:outline-none min-w-[140px]"
+            className="w-full bg-slate-50/50 border border-slate-100 rounded-2xl py-4 px-6 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-primary/20 transition-all outline-none appearance-none cursor-pointer"
             value={filters.itemId}
             onChange={e => setFilters({...filters, itemId: e.target.value})}
         >
-            <option value="all">All Items</option>
+            <option value="all">All Inventory Items</option>
             {items.map(i => <option key={i._id} value={i._id}>{i.name}</option>)}
         </select>
 
         <select 
-            className="h-[40px] border border-slate-200 rounded-md px-4 text-sm font-medium focus:outline-primary focus:outline-none min-w-[140px]"
+            className="w-full bg-slate-50/50 border border-slate-100 rounded-2xl py-4 px-6 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-primary/20 transition-all outline-none appearance-none cursor-pointer"
             value={filters.type}
             onChange={e => setFilters({...filters, type: e.target.value})}
         >
-            <option value="all">All Types</option>
+            <option value="all">All Action Types</option>
             <option value="WITHDRAWAL">Withdrawals</option>
             <option value="RESTOCK">Restocks</option>
         </select>
       </div>
 
       {/* History Table */}
-      <div className="system-card overflow-hidden">
+      <div className="system-card overflow-hidden bg-white shadow-premium border border-slate-50">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b-2 border-slate-100 text-[12px] font-bold text-slate-500 uppercase">
-                <th className="px-6 py-4">Date & Time</th>
-                <th className="px-6 py-4">Item</th>
-                <th className="px-6 py-4">Type</th>
-                <th className="px-6 py-4">Quantity</th>
-                <th className="px-6 py-4">Person/Source</th>
-                <th className="px-6 py-4 text-right">Balance After</th>
+              <tr className="bg-slate-50/50 border-b-2 border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                <th className="px-8 py-5">Timestamp</th>
+                <th className="px-8 py-5">Asset Involved</th>
+                <th className="px-8 py-5 text-center">Action</th>
+                <th className="px-8 py-5 text-center">Quantity</th>
+                <th className="px-8 py-5">Personnel</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-50">
               {filteredHistory.length === 0 ? (
-                <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-mono text-sm uppercase tracking-widest italic">No matching transactions found</td></tr>
+                <tr><td colSpan="5" className="px-8 py-20 text-center text-slate-300 font-bold uppercase tracking-[0.3em] text-xs">No audit records found</td></tr>
               ) : (
                 filteredHistory.map((h) => (
-                  <tr key={h._id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-semibold text-slate-900">{format(new Date(h._creationTime), 'MMM d, yyyy')}</div>
-                      <div className="text-[11px] text-slate-400 font-mono mt-0.5 uppercase tracking-tighter">{format(new Date(h._creationTime), 'hh:mm a')}</div>
+                  <tr key={h._id} className="group hover:bg-slate-50/50 transition-all">
+                    <td className="px-8 py-6">
+                      <div className="font-bold text-slate-900">{format(new Date(h._creationTime), 'MMM d, yyyy')}</div>
+                      <div className="text-[10px] text-slate-400 font-black mt-1 uppercase tracking-widest">{format(new Date(h._creationTime), 'hh:mm a')}</div>
                     </td>
-                    <td className="px-6 py-4 font-semibold text-slate-900">{h.itemName}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-8 py-6">
+                      <p className="font-bold text-slate-900">{h.itemName}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID: {h._id.slice(-6).toUpperCase()}</p>
+                    </td>
+                    <td className="px-8 py-6 text-center">
                       <span className={`status-badge ${h.type === 'RESTOCK' ? 'status-ok' : 'status-out'}`}>
                         {h.type}
                       </span>
                     </td>
-                    <td className={`px-6 py-4 font-bold font-mono text-sm ${h.type === 'RESTOCK' ? 'text-success' : 'text-danger'}`}>
-                      {h.type === 'RESTOCK' ? '+' : '-'}{h.quantity} {h.unit}
+                    <td className={`px-8 py-6 text-center font-black font-mono text-sm ${h.type === 'RESTOCK' ? 'text-success' : 'text-danger'}`}>
+                      {h.type === 'RESTOCK' ? '+' : '-'}{h.quantity} <span className="text-[10px] uppercase font-bold opacity-40 ml-1">{h.unit}</span>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 font-medium">{h.person}</td>
-                    <td className="px-6 py-4 text-right font-bold text-slate-900 font-mono">--</td> {/* Balance not tracked in mock */}
+                    <td className="px-8 py-6 text-slate-600">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400 uppercase">
+                          {h.person.charAt(0)}
+                        </div>
+                        <span className="font-bold uppercase text-xs tracking-widest text-slate-700">{h.person}</span>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
-        </div>
-
-        {/* Pagination placeholder */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-medium">Showing {filteredHistory.length} of {history.length} transactions</span>
-            <div className="flex gap-2">
-                <button className="p-2 border border-slate-200 rounded-md text-slate-400 hover:bg-white disabled:opacity-30" disabled><ChevronLeft size={16} /></button>
-                <button className="p-2 border border-slate-200 rounded-md text-slate-400 hover:bg-white disabled:opacity-30" disabled><ChevronRight size={16} /></button>
-            </div>
         </div>
       </div>
     </div>
