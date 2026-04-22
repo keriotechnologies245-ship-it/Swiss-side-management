@@ -7,6 +7,6 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_CONVEX_URL
-        value: https://stoic-flamingo-219.convex.cloud
+        value: https://usable-ant-895.convex.cloud
       - key: VITE_CONVEX_SITE_URL
-        value: https://stoic-flamingo-219.convex.site
+        value: https://usable-ant-895.convex.site
