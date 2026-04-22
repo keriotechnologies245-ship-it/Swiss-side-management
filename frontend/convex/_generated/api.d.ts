@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
 import type * as cleanup from "../cleanup.js";
 import type * as generalSupplies from "../generalSupplies.js";
 import type * as gymItems from "../gymItems.js";
@@ -27,6 +28,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
   cleanup: typeof cleanup;
   generalSupplies: typeof generalSupplies;
   gymItems: typeof gymItems;
