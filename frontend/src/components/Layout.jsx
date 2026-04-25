@@ -55,12 +55,8 @@ const Layout = () => {
       if (verifiedUser.displayName) {
         localStorage.setItem('swiss_side_display_name', verifiedUser.displayName);
       }
-      // Self-healing: promote if they are the only user
-      if (verifiedUser.role !== 'super_admin' && sessionToken) {
-        promoteToAdmin({ token: sessionToken }).catch(() => {});
-      }
     }
-  }, [verifiedUser, navigate, sessionToken, promoteToAdmin]);
+  }, [verifiedUser, navigate, sessionToken]);
 
   const handleLogout = () => {
     localStorage.removeItem('swiss_side_session');

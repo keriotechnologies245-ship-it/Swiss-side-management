@@ -267,26 +267,6 @@ export const updateDisplayName = mutation({
   },
 });
 
-/**
- * Self-healing mutation: Promote the only user to super_admin if they are not already.
- * Called from the frontend after login if user has no admin access.
- */
-export const promoteOnlyUserToAdmin = mutation({
-  args: { token: v.string() },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q: any) => q.eq("token", args.token))
-      .unique();
-    if (!user) throw new Error("Invalid session.");
-    const allUsers = await ctx.db.query("users").collect();
-    if (allUsers.length === 1 && user.role !== "super_admin") {
-      await ctx.db.patch(user._id, { role: "super_admin" });
-      return { promoted: true };
-    }
-    return { promoted: false };
-  },
-});
 
 /**
  * Admin-Only: Reset any user's password
@@ -367,7 +347,7 @@ export const getSystemMetrics = query({
         totalDocuments: totalDocs,
         limit: 10000,
         usagePercentage: (totalDocs / 10000) * 100,
-        status: totalDocs > 8000 ? "CRITICAL" : totalDocs > 5000 ? "WARNING" : "OPTIMAL"
+        status: totalDocs > 9000 ? "CRITICAL" : totalDocs > 7000 ? "WARNING" : "OPTIMAL"
       }
     };
   },
