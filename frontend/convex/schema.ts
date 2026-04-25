@@ -4,16 +4,17 @@ import { v } from "convex/values";
 export default defineSchema({
   users: defineTable({
     email: v.string(),
-    password: v.string(), // This will store the bcrypt hash
+    password: v.string(),
     role: v.union(v.literal("super_admin"), v.literal("staff")),
-    token: v.optional(v.string()), // Current session token
-    tokenExpiry: v.optional(v.number()), // Timestamp for session expiration
-    failedAttempts: v.optional(v.number()), // For brute-force protection
-    lockUntil: v.optional(v.number()), // Timestamp for account lockout
-    otpCode: v.optional(v.string()), // Temporary 6-digit OTP
-    otpExpiry: v.optional(v.number()), // Timestamp for OTP expiration
-    resetToken: v.optional(v.string()), // For email password reset
-    resetTokenExpiry: v.optional(v.number()), // Reset token expiration
+    displayName: v.optional(v.string()),       // Human-readable name set by admin
+    token: v.optional(v.string()),
+    tokenExpiry: v.optional(v.number()),
+    failedAttempts: v.optional(v.number()),
+    lockUntil: v.optional(v.number()),
+    otpCode: v.optional(v.string()),
+    otpExpiry: v.optional(v.number()),
+    resetToken: v.optional(v.string()),
+    resetTokenExpiry: v.optional(v.number()),
   })
   .index("by_email", ["email"])
   .index("by_token", ["token"])
@@ -77,7 +78,7 @@ export default defineSchema({
   .index("by_roomId", ["roomId"]),
 
   transactions: defineTable({
-    itemId: v.id("items"),
+    itemId: v.union(v.id("items"), v.id("generalSupplies")),
     itemName: v.string(),
     type: v.union(v.literal("RESTOCK"), v.literal("WITHDRAWAL")),
     quantity: v.number(),
@@ -90,6 +91,7 @@ export default defineSchema({
 
   needs: defineTable({
     department: v.union(v.literal("Kitchen"), v.literal("Gym"), v.literal("Rooms"), v.literal("General")),
+    roomId: v.optional(v.id("rooms")), // Link directly to a room if department is "Rooms"
     item: v.string(),
     quantity: v.optional(v.string()),
     status: v.union(v.literal("Pending"), v.literal("Ordered"), v.literal("Fulfilled")),
@@ -97,7 +99,13 @@ export default defineSchema({
     notes: v.optional(v.string()),
     requestor: v.string(),
   })
-  .index("by_department", ["department"]),
+  .index("by_department", ["department"])
+  .index("by_roomId", ["roomId"]),
+
+  roomTemplates: defineTable({
+    itemName: v.string(),
+    quantity: v.number(),
+  }),
 
   generalSupplies: defineTable({
     name: v.string(),

@@ -2,28 +2,18 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { 
-  ChefHat, 
-  Dumbbell, 
-  Bed, 
-  Package,
-  TrendingUp, 
-  AlertCircle, 
-  CheckCircle2,
-  ArrowRight,
-  Clock,
-  Info
-} from 'lucide-react';
+import { ChefHat, Dumbbell, Bed, Package, Clock } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   
+  const sessionToken = localStorage.getItem('swiss_side_session') || "";
+
   // Department Data
-  const kitchenItems = useQuery(api.items.getAll);
-  const gymItems = useQuery(api.gymItems.getAll);
-  const rooms = useQuery(api.rooms.getAll);
-  const generalSupplies = useQuery(api.generalSupplies.getAll);
-  const kitchenHistory = useQuery(api.transactions.getHistory);
+  const kitchenItems    = useQuery(api.items.getAll, { token: sessionToken });
+  const gymItems        = useQuery(api.gymItems.getAll, { token: sessionToken });
+  const rooms           = useQuery(api.rooms.getAll, { token: sessionToken });
+  const generalSupplies = useQuery(api.generalSupplies.getAll, { token: sessionToken });
 
   const stats = useMemo(() => {
     if (!kitchenItems || !gymItems || !rooms || !generalSupplies) return null;
@@ -94,78 +84,6 @@ export default function Dashboard() {
             </div>
           </div>
         ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        {/* Alerts & Notifications */}
-        <div className="system-card p-10 bg-white">
-          <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3 uppercase tracking-tight">
-            <AlertCircle size={20} className="text-danger" /> Alerts & Notifications
-          </h3>
-          <div className="space-y-4">
-            {stats.kitchen.lowStock > 0 && (
-              <div className="flex items-center gap-4 p-4 bg-danger/5 border border-danger/10 rounded-2xl">
-                <div className="w-2 h-2 bg-danger rounded-full animate-pulse"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-slate-900">Kitchen: {stats.kitchen.lowStock} Items Low Stock</p>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inventory Restock Required</p>
-                </div>
-              </div>
-            )}
-            {stats.gym.maintenance > 0 && (
-              <div className="flex items-center gap-4 p-4 bg-warning/5 border border-warning/10 rounded-2xl">
-                <div className="w-2 h-2 bg-warning rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-slate-900">Gym: {stats.gym.maintenance} Equipment Issues</p>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Maintenance Action Pending</p>
-                </div>
-              </div>
-            )}
-            {stats.rooms.maintenance > 0 && (
-              <div className="flex items-center gap-4 p-4 bg-primary/5 border border-primary/10 rounded-2xl">
-                <div className="w-2 h-2 bg-primary rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-slate-900">Rooms: {stats.rooms.maintenance} Units Under Repair</p>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lodge Capacity Reduced</p>
-                </div>
-              </div>
-            )}
-            {stats.kitchen.lowStock === 0 && stats.gym.maintenance === 0 && stats.rooms.maintenance === 0 && (
-              <div className="flex flex-col items-center justify-center py-10 opacity-30">
-                <CheckCircle2 size={48} className="mb-4" />
-                <p className="text-sm font-bold uppercase tracking-widest">All Systems Optimal</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="system-card p-10 bg-white">
-          <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3 uppercase tracking-tight">
-            <Clock size={20} className="text-primary" /> Recent Intelligence
-          </h3>
-          <div className="space-y-6">
-            {kitchenHistory?.slice(0, 5).map((h) => (
-              <div key={h._id} className="flex items-center justify-between pb-6 border-b border-slate-50 last:border-0 last:pb-0">
-                <div className="flex items-center gap-4">
-                  <div className={`p-2 rounded-lg ${h.type === 'RESTOCK' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
-                    <Info size={16} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-900">{h.itemName}</p>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black">{h.type} • {h.person}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={`text-sm font-black ${h.type === 'RESTOCK' ? 'text-success' : 'text-danger'}`}>
-                    {h.type === 'RESTOCK' ? '+' : '-'}{h.quantity} {h.unit}
-                  </p>
-                  <p className="text-[10px] text-slate-300 font-bold uppercase">{new Date(h._creationTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Quick Access Grid */}

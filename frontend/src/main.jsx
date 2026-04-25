@@ -20,6 +20,13 @@ import Settings from './pages/Settings'
 import GeneralSupplies from './pages/GeneralSupplies'
 import ErrorBoundary from './components/ErrorBoundary'
 
+// Guard: redirect to /login if no session token in localStorage
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem('swiss_side_session');
+  if (!token) return <Navigate to="/login" replace />;
+  return children;
+}
+
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL || "http://localhost:3210");
 
 createRoot(document.getElementById('root')).render(
@@ -30,7 +37,7 @@ createRoot(document.getElementById('root')).render(
           <Routes>
             <Route path="/login" element={<Login />} />
             
-            <Route path="/" element={<Layout />}>
+            <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="inventory" element={<Inventory />} />

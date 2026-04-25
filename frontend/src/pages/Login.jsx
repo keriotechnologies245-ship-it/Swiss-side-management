@@ -41,7 +41,17 @@ export default function Login() {
         navigate('/dashboard');
       }
     } catch (err) {
-      toast.error(err.message?.replace("Uncaught Error: ", "") || "Access denied.");
+      const raw = err.message || '';
+      if (raw.includes('locked')) {
+        // Extract the readable part of lockout messages
+        const lockMsg = raw.includes('15 minutes')
+          ? 'Too many failed attempts. Account locked for 15 minutes.'
+          : raw.replace('Account locked. Try again in ', 'Too many attempts. Try again in ');
+        toast.error(lockMsg);
+      } else {
+        // For all credential failures, show a clean generic message
+        toast.error('Incorrect email or password.');
+      }
     } finally {
       setLoading(false);
     }
@@ -95,7 +105,7 @@ export default function Login() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" autoComplete="off">
             {/* Email */}
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
@@ -106,7 +116,7 @@ export default function Login() {
                 <input
                   id="login-email"
                   type="email"
-                  autoComplete="email"
+                  autoComplete="off"
                   className="input-field pl-11"
                   placeholder="your@email.com"
                   value={email}
@@ -126,7 +136,7 @@ export default function Login() {
                 <input
                   id="login-password"
                   type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   className="input-field pl-11 pr-12"
                   placeholder="••••••••"
                   value={password}

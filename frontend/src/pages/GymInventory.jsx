@@ -1,20 +1,23 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Pencil, Trash2, Plus, Dumbbell, Search, Filter, Wrench, Package } from 'lucide-react';
+import { Pencil, Trash2, Plus, Dumbbell, Search, Filter, Wrench, Package, Check } from 'lucide-react';
 import Modal from '../components/Modal';
+import ConfirmModal from '../components/ConfirmModal';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
 export default function GymInventory() {
   const navigate = useNavigate();
-  const items = useQuery(api.gymItems.getAll);
-  const gymNeeds = useQuery(api.needs.getByDepartment, { department: 'Gym' });
+  const sessionToken = localStorage.getItem('swiss_side_session') || '';
+  const items = useQuery(api.gymItems.getAll, { token: sessionToken });
+  const gymNeeds = useQuery(api.needs.getByDepartment, { token: sessionToken, department: 'Gym' });
   const createItem = useMutation(api.gymItems.create);
   const updateItem = useMutation(api.gymItems.update);
   const removeItem = useMutation(api.gymItems.remove);
   const createNeed = useMutation(api.needs.create);
   const removeNeed = useMutation(api.needs.remove);
+  const updateNeedStatus = useMutation(api.needs.updateStatus);
 
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,6 +45,7 @@ export default function GymInventory() {
     setLoading(true);
     try {
       await createNeed({
+        token: sessionToken,
         department: 'Gym',
         item: needFormData.item,
         quantity: needFormData.quantity,
@@ -53,9 +57,18 @@ export default function GymInventory() {
       setIsNeedsModalOpen(false);
       setNeedFormData({ item: '', quantity: '', priority: 'Medium', notes: '' });
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message?.replace("Uncaught Error: ", ""));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const markRequestFulfilled = async (reqId) => {
+    try {
+      await updateNeedStatus({ token: sessionToken, id: reqId, status: "Fulfilled" });
+      toast.success("Request fulfilled");
+    } catch (err) {
+      toast.error(err.message?.replace("Uncaught Error: ", ""));
     }
   };
 
@@ -80,36 +93,50 @@ export default function GymInventory() {
     if (!formData.name) return toast.error("Asset name is required");
     setLoading(true);
     try {
+      const qty = parseInt(formData.quantity);
+      if (isNaN(qty) || qty < 0) return toast.error("Quantity must be a positive number.");
+
       const payload = {
         name: formData.name,
         condition: formData.condition,
-        quantity: parseInt(formData.quantity) || 1,
+        quantity: qty,
         lastChecked: formData.lastChecked,
         notes: formData.notes
       };
       if (editingItem) {
-        await updateItem({ id: editingItem._id, ...payload });
+        await updateItem({ token: sessionToken, id: editingItem._id, ...payload });
         toast.success('Asset updated');
       } else {
-        await createItem(payload);
+        await createItem({ token: sessionToken, ...payload });
         toast.success('Asset added to gym');
       }
       setIsModalOpen(false);
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message?.replace("Uncaught Error: ", ""));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (item) => {
-    if (window.confirm('Are you sure you want to delete this equipment?')) {
-      try {
-        await removeItem({ id: item._id });
-        toast.success('Asset removed');
-      } catch (err) {
-        toast.error(err.message);
-      }
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+
+  const handleDelete = (item) => {
+    setItemToDelete(item);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    setLoading(true);
+    try {
+      await removeItem({ token: sessionToken, id: itemToDelete._id });
+      toast.success('Asset removed');
+      setIsDeleteModalOpen(false);
+    } catch (err) {
+      toast.error(err.message?.replace("Uncaught Error: ", ""));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -197,7 +224,7 @@ export default function GymInventory() {
                       <button 
                         onClick={async () => {
                           const newCondition = item.condition === 'Broken' ? 'Good' : 'Broken';
-                          await updateItem({ id: item._id, condition: newCondition });
+                          await updateItem({ token: sessionToken, id: item._id, condition: newCondition });
                           toast.success(`Status updated to ${newCondition}`);
                         }}
                         className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
@@ -253,9 +280,20 @@ export default function GymInventory() {
                 }`}>
                   {need.priority} Priority
                 </span>
-                <button onClick={() => removeNeed({ id: need._id })} className="text-slate-300 hover:text-danger">
-                  <Trash2 size={14} />
-                </button>
+                <div className="flex items-center gap-2">
+                  {need.status !== 'Fulfilled' && (
+                    <button 
+                      onClick={() => markRequestFulfilled(need._id)} 
+                      className="text-slate-300 hover:text-success transition-all"
+                      title="Mark as Fulfilled"
+                    >
+                      <Check size={16} />
+                    </button>
+                  )}
+                  <button onClick={() => removeNeed({ token: sessionToken, id: need._id })} className="text-slate-300 hover:text-danger transition-all">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
               <h4 className="text-lg font-bold text-slate-900 mb-1">{need.item}</h4>
               <p className="text-xs text-slate-500 mb-4">{need.notes || 'No additional details provided.'}</p>
@@ -349,7 +387,7 @@ export default function GymInventory() {
             </div>
             <div>
               <label className="block text-xs-label text-slate-400 uppercase mb-3">Quantity</label>
-              <input type="number" className="input-field" value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} />
+              <input type="number" min="0" className="input-field" value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} />
             </div>
           </div>
           <div>
@@ -362,6 +400,15 @@ export default function GymInventory() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmModal 
+        isOpen={isDeleteModalOpen} 
+        onClose={() => setIsDeleteModalOpen(false)} 
+        onConfirm={confirmDelete}
+        title="Destroy Asset Entry?"
+        message={`This will permanently remove ${itemToDelete?.name} from the gym registry. This action cannot be undone.`}
+        loading={loading}
+      />
     </div>
   );
 }

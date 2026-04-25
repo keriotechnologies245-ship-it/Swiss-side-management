@@ -1,70 +1,80 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { checkAuth } from "./auth";
 
 export const getHistory = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    await checkAuth(ctx, args.token);
     return await ctx.db.query("transactions").order("desc").collect();
   },
 });
 
 export const withdraw = mutation({
   args: {
-    itemId: v.id("items"),
+    token: v.string(),
+    itemId: v.union(v.id("items"), v.id("generalSupplies")),
     quantity: v.number(),
     person: v.string(),
     notes: v.optional(v.string())
   },
   handler: async (ctx, args) => {
-    const item = await ctx.db.get(args.itemId);
+    const { token, ...data } = args;
+    await checkAuth(ctx, token, "staff");
+
+    const item = await ctx.db.get(data.itemId);
     if (!item) throw new Error("Item not found");
-    if (item.quantity < args.quantity) {
+    if (item.quantity < data.quantity) {
       throw new Error(`Insufficient stock. Only ${item.quantity} ${item.unit} available.`);
     }
 
     // Deduct stock
-    await ctx.db.patch(args.itemId, {
-      quantity: item.quantity - args.quantity
+    await ctx.db.patch(data.itemId, {
+      quantity: item.quantity - data.quantity
     });
 
     // Log transaction
     await ctx.db.insert("transactions", {
-      itemId: args.itemId,
+      itemId: data.itemId,
       itemName: item.name,
       type: "WITHDRAWAL",
-      quantity: args.quantity,
+      quantity: data.quantity,
       unit: item.unit,
-      person: args.person,
-      notes: args.notes
+      person: data.person,
+      notes: data.notes
     });
   }
 });
 
 export const restock = mutation({
   args: {
-    itemId: v.id("items"),
+    token: v.string(),
+    itemId: v.union(v.id("items"), v.id("generalSupplies")),
     quantity: v.number(),
     person: v.string(),
     notes: v.optional(v.string())
   },
   handler: async (ctx, args) => {
-    const item = await ctx.db.get(args.itemId);
+    const { token, ...data } = args;
+    await checkAuth(ctx, token, "staff");
+
+    const item = await ctx.db.get(data.itemId);
     if (!item) throw new Error("Item not found");
 
     // Add stock
-    await ctx.db.patch(args.itemId, {
-      quantity: item.quantity + args.quantity
+    await ctx.db.patch(data.itemId, {
+      quantity: item.quantity + data.quantity
     });
 
     // Log transaction
     await ctx.db.insert("transactions", {
-      itemId: args.itemId,
+      itemId: data.itemId,
       itemName: item.name,
       type: "RESTOCK",
-      quantity: args.quantity,
+      quantity: data.quantity,
       unit: item.unit,
-      person: args.person,
-      notes: args.notes
+      person: data.person,
+      notes: data.notes
     });
   }
 });

@@ -8,8 +8,9 @@ import { useNavigate } from 'react-router-dom';
 
 export default function RoomInventory() {
   const navigate = useNavigate();
-  const items = useQuery(api.roomItems.getAll);
-  const rooms = useQuery(api.rooms.getAll);
+  const sessionToken = localStorage.getItem('swiss_side_session') || '';
+  const items = useQuery(api.roomItems.getAll, { token: sessionToken });
+  const rooms = useQuery(api.rooms.getAll, { token: sessionToken });
   const updateItem = useMutation(api.roomItems.update);
   const removeItem = useMutation(api.roomItems.remove);
 
@@ -55,12 +56,12 @@ export default function RoomInventory() {
         notes: formData.notes
       };
       if (editingItem) {
-        await updateItem({ id: editingItem._id, ...payload });
+        await updateItem({ token: sessionToken, id: editingItem._id, ...payload });
         toast.success('Asset updated');
       }
       setIsModalOpen(false);
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message?.replace("Uncaught Error: ", ""));
     } finally {
       setLoading(false);
     }
@@ -69,10 +70,10 @@ export default function RoomInventory() {
   const handleDelete = async (item) => {
     if (window.confirm('Remove this asset record?')) {
       try {
-        await removeItem({ id: item._id });
+        await removeItem({ token: sessionToken, id: item._id });
         toast.success('Asset removed');
       } catch (err) {
-        toast.error(err.message);
+        toast.error(err.message?.replace("Uncaught Error: ", ""));
       }
     }
   };

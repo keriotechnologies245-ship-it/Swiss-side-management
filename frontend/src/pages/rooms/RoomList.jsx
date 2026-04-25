@@ -4,11 +4,13 @@ import { api } from "../../../convex/_generated/api";
 import { Plus, Bed, Pencil, Trash2, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../../components/Modal';
+import ConfirmModal from '../../components/ConfirmModal';
 import { toast } from 'react-hot-toast';
 
 export default function RoomList() {
   const navigate = useNavigate();
-  const rooms = useQuery(api.rooms.getAll);
+  const sessionToken = localStorage.getItem('swiss_side_session') || '';
+  const rooms = useQuery(api.rooms.getAll, { token: sessionToken });
   const createRoom = useMutation(api.rooms.create);
   const updateRoom = useMutation(api.rooms.update);
   const removeRoom = useMutation(api.rooms.remove);
@@ -45,28 +47,39 @@ export default function RoomList() {
     setLoading(true);
     try {
       if (editingRoom) {
-        await updateRoom({ id: editingRoom._id, ...formData });
+        await updateRoom({ token: sessionToken, id: editingRoom._id, ...formData });
         toast.success('Room updated');
       } else {
-        await createRoom(formData);
+        await createRoom({ token: sessionToken, ...formData });
         toast.success('Room created');
       }
       setIsModalOpen(false);
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message?.replace("Uncaught Error: ", ""));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (room) => {
-    if (window.confirm('Are you sure? This will delete the room and all its inventory records.')) {
-      try {
-        await removeRoom({ id: room._id });
-        toast.success('Room deleted');
-      } catch (err) {
-        toast.error(err.message);
-      }
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState(null);
+
+  const handleDelete = (room) => {
+    setRoomToDelete(room);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!roomToDelete) return;
+    setLoading(true);
+    try {
+      await removeRoom({ token: sessionToken, id: roomToDelete._id });
+      toast.success('Room deleted');
+      setIsDeleteModalOpen(false);
+    } catch (err) {
+      toast.error(err.message?.replace("Uncaught Error: ", ""));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -205,6 +218,15 @@ export default function RoomList() {
           </div>
         </div>
       </Modal>
+      
+      <ConfirmModal 
+        isOpen={isDeleteModalOpen} 
+        onClose={() => setIsDeleteModalOpen(false)} 
+        onConfirm={confirmDelete}
+        title="Destroy Room Entry?"
+        message={`This will permanently remove ${roomToDelete?.name} and all its associated inventory data from the vault. This action is irreversible.`}
+        loading={loading}
+      />
     </div>
   );
 }

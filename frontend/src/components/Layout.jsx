@@ -28,20 +28,34 @@ const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+
   const sessionToken = localStorage.getItem('swiss_side_session') || '';
-  const verifiedUser = useQuery(api.users.verifySession, { token: sessionToken });
+  
+  // Convex is fully reactive — verifySession re-runs automatically.
+  const verifiedUser = useQuery(api.users.verifySession, 
+    sessionToken ? { token: sessionToken } : "skip"
+  );
+  
   const promoteToAdmin = useMutation(api.users.promoteOnlyUserToAdmin);
 
   useEffect(() => {
-    if (verifiedUser === null) {
+    // If we have a token but the server says it's invalid (null)
+    if (sessionToken && verifiedUser === null) {
+      toast.error('Session expired. Please log in again.');
       localStorage.removeItem('swiss_side_session');
       localStorage.removeItem('swiss_side_user');
       localStorage.removeItem('swiss_side_role');
       navigate('/login');
-    } else if (verifiedUser) {
-      // Sync role from server to localStorage
+    } 
+    // If the server confirms the user, sync their email + role from server (single source of truth)
+    else if (verifiedUser && verifiedUser.email) {
+      setUserEmail(verifiedUser.email);
+      localStorage.setItem('swiss_side_user', verifiedUser.email);
       localStorage.setItem('swiss_side_role', verifiedUser.role);
-      // Self-healing: if only user exists but isn't admin yet, promote them
+      if (verifiedUser.displayName) {
+        localStorage.setItem('swiss_side_display_name', verifiedUser.displayName);
+      }
+      // Self-healing: promote if they are the only user
       if (verifiedUser.role !== 'super_admin' && sessionToken) {
         promoteToAdmin({ token: sessionToken }).catch(() => {});
       }
@@ -161,7 +175,9 @@ const Layout = () => {
             <img src="/logo.png" alt="User" className="w-full h-full object-cover opacity-50" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-slate-900 truncate">{userEmail.split('@')[0]}</p>
+            <p className="text-xs font-bold text-slate-900 truncate">
+              {localStorage.getItem('swiss_side_display_name') || userEmail.split('@')[0]}
+            </p>
             <p className="text-[9px] text-slate-400 truncate uppercase tracking-widest font-black">Authorized</p>
           </div>
         </div>

@@ -10,14 +10,15 @@
 
 import type * as auth from "../auth.js";
 import type * as cleanup from "../cleanup.js";
+import type * as debug from "../debug.js";
 import type * as generalSupplies from "../generalSupplies.js";
 import type * as gymItems from "../gymItems.js";
 import type * as items from "../items.js";
 import type * as needs from "../needs.js";
 import type * as resend from "../resend.js";
 import type * as roomItems from "../roomItems.js";
+import type * as roomTemplates from "../roomTemplates.js";
 import type * as rooms from "../rooms.js";
-import type * as seed from "../seed.js";
 import type * as transactions from "../transactions.js";
 import type * as users from "../users.js";
 
@@ -30,14 +31,15 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   cleanup: typeof cleanup;
+  debug: typeof debug;
   generalSupplies: typeof generalSupplies;
   gymItems: typeof gymItems;
   items: typeof items;
   needs: typeof needs;
   resend: typeof resend;
   roomItems: typeof roomItems;
+  roomTemplates: typeof roomTemplates;
   rooms: typeof rooms;
-  seed: typeof seed;
   transactions: typeof transactions;
   users: typeof users;
 }>;

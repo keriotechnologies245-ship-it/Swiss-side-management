@@ -6,7 +6,8 @@ import Modal from '../../components/Modal';
 import { toast } from 'react-hot-toast';
 
 export default function GymMaintenance() {
-  const items = useQuery(api.gymItems.getAll);
+  const sessionToken = localStorage.getItem('swiss_side_session') || '';
+  const items = useQuery(api.gymItems.getAll, { token: sessionToken });
   const updateItem = useMutation(api.gymItems.update);
   const removeItem = useMutation(api.gymItems.remove);
 
@@ -16,6 +17,7 @@ export default function GymMaintenance() {
   const handleUpdateStatus = async (item, newStatus) => {
     try {
       await updateItem({
+        token: sessionToken,
         id: item._id,
         name: item.name,
         condition: newStatus,
@@ -25,7 +27,7 @@ export default function GymMaintenance() {
       });
       toast.success(`Updated ${item.name} to ${newStatus}`);
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message?.replace("Uncaught Error: ", ""));
     }
   };
 

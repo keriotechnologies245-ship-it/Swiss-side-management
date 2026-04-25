@@ -1,27 +1,33 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { checkAuth } from "./auth";
 
 export const getAll = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    await checkAuth(ctx, args.token);
     return await ctx.db.query("items").collect();
   },
 });
 
 export const create = mutation({
   args: {
+    token: v.string(),
     name: v.string(),
     unit: v.string(),
     quantity: v.number(),
     reorderLevel: v.number(),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("items", args);
+    const { token, ...data } = args;
+    await checkAuth(ctx, token, "staff");
+    return await ctx.db.insert("items", data);
   },
 });
 
 export const update = mutation({
   args: {
+    token: v.string(),
     id: v.id("items"),
     name: v.string(),
     unit: v.string(),
@@ -29,14 +35,19 @@ export const update = mutation({
     reorderLevel: v.number(),
   },
   handler: async (ctx, args) => {
-    const { id, ...rest } = args;
+    const { token, id, ...rest } = args;
+    await checkAuth(ctx, token, "staff");
     await ctx.db.patch(id, rest);
   },
 });
 
 export const remove = mutation({
-  args: { id: v.id("items") },
+  args: { 
+    token: v.string(),
+    id: v.id("items") 
+  },
   handler: async (ctx, args) => {
+    await checkAuth(ctx, args.token, "staff");
     await ctx.db.delete(args.id);
   },
 });

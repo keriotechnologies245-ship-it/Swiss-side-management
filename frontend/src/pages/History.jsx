@@ -5,8 +5,9 @@ import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function Transactions() {
-  const history = useQuery(api.transactions.getHistory);
-  const items = useQuery(api.items.getAll);
+  const sessionToken = localStorage.getItem('swiss_side_session') || '';
+  const history = useQuery(api.transactions.getHistory, { token: sessionToken });
+  const items = useQuery(api.items.getAll, { token: sessionToken });
 
   const [filters, setFilters] = useState({ dateRange: 'all', itemId: 'all', type: 'all', search: '' });
 
@@ -77,11 +78,12 @@ export default function Transactions() {
                 <th className="px-8 py-5 text-center">Action</th>
                 <th className="px-8 py-5 text-center">Quantity</th>
                 <th className="px-8 py-5">Personnel</th>
+                <th className="px-8 py-5">Reason</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredHistory.length === 0 ? (
-                <tr><td colSpan="5" className="px-8 py-20 text-center text-slate-300 font-bold uppercase tracking-[0.3em] text-xs">No audit records found</td></tr>
+                <tr><td colSpan="6" className="px-8 py-20 text-center text-slate-300 font-bold uppercase tracking-[0.3em] text-xs">No audit records found</td></tr>
               ) : (
                 filteredHistory.map((h) => (
                   <tr key={h._id} className="group hover:bg-slate-50/50 transition-all">
@@ -108,6 +110,13 @@ export default function Transactions() {
                         </div>
                         <span className="font-bold uppercase text-xs tracking-widest text-slate-700">{h.person}</span>
                       </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      {h.notes ? (
+                        <span className="text-sm text-slate-600 font-medium">{h.notes}</span>
+                      ) : (
+                        <span className="text-[10px] text-slate-300 font-bold uppercase tracking-widest">—</span>
+                      )}
                     </td>
                   </tr>
                 ))

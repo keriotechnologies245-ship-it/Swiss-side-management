@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation } from "convex/react";
@@ -6,7 +7,8 @@ import { toast } from 'react-hot-toast';
 import { ArrowLeft, Package, User, ClipboardList } from 'lucide-react';
 
 export default function Withdraw() {
-  const items = useQuery(api.items.getAll);
+  const sessionToken = localStorage.getItem('swiss_side_session') || '';
+  const items = useQuery(api.items.getAll, { token: sessionToken });
   const withdrawMutation = useMutation(api.transactions.withdraw);
   const navigate = useNavigate();
   const location = useLocation();
@@ -27,6 +29,7 @@ export default function Withdraw() {
   const onSubmit = async (data) => {
     try {
       await withdrawMutation({
+        token: sessionToken,
         itemId: data.itemId,
         quantity: parseFloat(data.quantity),
         person: data.staffName,
@@ -35,7 +38,7 @@ export default function Withdraw() {
       // Fast, simple redirect
       navigate('/dashboard');
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message?.replace("Uncaught Error: ", ""));
     }
   };
 

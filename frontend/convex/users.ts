@@ -11,6 +11,7 @@ export const isSystemEmpty = query({
 });
 
 
+
 /**
  * Sign In: Verify credentials and issue session token directly (no OTP required)
  */
@@ -29,8 +30,9 @@ export const signIn = mutation({
       throw new Error(`Account locked. Try again in ${Math.ceil((user.lockUntil - Date.now()) / 60000)}m.`);
     }
 
-    // 2. Verify Password
-    const isPasswordValid = bcrypt.compareSync(args.password, user.password);
+    // 2. Verify Password - Cap length to prevent bcrypt DoS
+    const passwordToCheck = args.password.slice(0, 100);
+    const isPasswordValid = bcrypt.compareSync(passwordToCheck, user.password);
     if (!isPasswordValid) {
       const attempts = (user.failedAttempts ?? 0) + 1;
       const lockout = attempts >= 5 ? Date.now() + 15 * 60 * 1000 : undefined;
@@ -102,13 +104,19 @@ export const requestPasswordReset = mutation({
       return { success: true }; 
     }
 
+    // Rate limit: Block if a reset was requested in the last 60 seconds
+    if (user.lastResetRequest && (Date.now() - user.lastResetRequest) < 60 * 1000) {
+      throw new Error("Please wait 60 seconds before requesting another reset.");
+    }
+
     // Generate a secure 6-digit numeric token
     const token = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = Date.now() + 30 * 60 * 1000; // 30 minutes
 
     await ctx.db.patch(user._id, {
       resetToken: token,
-      resetTokenExpiry: expiry
+      resetTokenExpiry: expiry,
+      lastResetRequest: Date.now(),
     });
 
     return { success: true }; // SECURITY: Never return the token in the response
@@ -138,9 +146,10 @@ export const resetPasswordWithToken = mutation({
       throw new Error("Reset token has expired.");
     }
 
-    // Success -> Update password and clear token
+    // Success -> Update password and clear token - also cap length
+    const passwordToHash = args.newPassword.slice(0, 100);
     const salt = bcrypt.genSaltSync(10);
-    const hashedPassword = bcrypt.hashSync(args.newPassword, salt);
+    const hashedPassword = bcrypt.hashSync(passwordToHash, salt);
     
     await ctx.db.patch(user._id, {
       password: hashedPassword,
@@ -162,19 +171,17 @@ export const createStaffAccount = mutation({
     adminToken: v.string(),
     newEmail: v.string(),
     newPassword: v.string(),
+    displayName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // 1. Verify the caller is indeed the Super Admin
     await checkAuth(ctx, args.adminToken, "super_admin");
 
-    // 2. Check if user already exists
     const existing = await ctx.db
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", args.newEmail))
       .unique();
     if (existing) throw new Error("This email is already in use.");
 
-    // 3. Hash the new staff member's password
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(args.newPassword, salt);
 
@@ -182,6 +189,7 @@ export const createStaffAccount = mutation({
       email: args.newEmail,
       password: hashedPassword,
       role: "staff",
+      displayName: args.displayName || undefined,
     });
 
     return { success: true };
@@ -195,14 +203,12 @@ export const listAllUsers = query({
   args: { adminToken: v.string() },
   handler: async (ctx, args) => {
     await checkAuth(ctx, args.adminToken, "super_admin");
-
     const users = await ctx.db.query("users").collect();
-    
-    // SECURITY: Never return password hashes or session tokens to the frontend
     return users.map(u => ({
       _id: u._id,
       email: u.email,
-      role: u.role
+      role: u.role,
+      displayName: u.displayName || null,
     }));
   },
 });
@@ -230,32 +236,34 @@ export const removeUser = mutation({
   },
 });
 
+
 /**
- * Internal: Fetch OTP for email (Used by Resend Action)
+ * Verify session token and return user info (READ-ONLY - queries cannot mutate)
+ * Convex re-runs this query reactively — no need for a heartbeat arg.
  */
-export const getOtpForEmail = query({
-  args: { email: v.string() },
+export const verifySession = query({
+  args: { 
+    token: v.string(),
+  },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .unique();
-    return user ? { otpCode: user.otpCode } : null;
+    try {
+      const user = await checkAuth(ctx, args.token);
+      return { email: user.email, role: user.role, displayName: user.displayName || null };
+    } catch {
+      return null;
+    }
   },
 });
 
 /**
- * Verify session token and return user info (READ-ONLY - queries cannot mutate)
+ * Any logged-in user can update their own display name
  */
-export const verifySession = query({
-  args: { token: v.string() },
+export const updateDisplayName = mutation({
+  args: { token: v.string(), displayName: v.string() },
   handler: async (ctx, args) => {
-    try {
-      const user = await checkAuth(ctx, args.token);
-      return { email: user.email, role: user.role };
-    } catch {
-      return null;
-    }
+    const user = await checkAuth(ctx, args.token);
+    await ctx.db.patch(user._id, { displayName: args.displayName.trim() || undefined });
+    return { success: true };
   },
 });
 
@@ -281,6 +289,30 @@ export const promoteOnlyUserToAdmin = mutation({
 });
 
 /**
+ * Admin-Only: Reset any user's password
+ */
+export const adminResetPassword = mutation({
+  args: {
+    adminToken: v.string(),
+    userId: v.id("users"),
+    newPassword: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await checkAuth(ctx, args.adminToken, "super_admin");
+    const salt = bcrypt.genSaltSync(10);
+    const hashedPassword = bcrypt.hashSync(args.newPassword, salt);
+    await ctx.db.patch(args.userId, {
+      password: hashedPassword,
+      failedAttempts: 0,
+      lockUntil: undefined,
+      token: undefined,      // Force re-login with new password
+      tokenExpiry: undefined,
+    });
+    return { success: true };
+  },
+});
+
+/**
  * Secure Logout: Destroy the session token on the server
  */
 export const logout = mutation({
@@ -298,5 +330,45 @@ export const logout = mutation({
       });
     }
     return { success: true };
+  },
+});
+
+/**
+ * Admin-Only: Get comprehensive system metrics for health monitoring
+ */
+export const getSystemMetrics = query({
+  args: { adminToken: v.string() },
+  handler: async (ctx, args) => {
+    await checkAuth(ctx, args.adminToken, "super_admin");
+
+    const [kitchen, gym, rooms, supplies, history, users, roomItems] = await Promise.all([
+      ctx.db.query("items").collect(),
+      ctx.db.query("gymItems").collect(),
+      ctx.db.query("rooms").collect(),
+      ctx.db.query("generalSupplies").collect(),
+      ctx.db.query("transactions").collect(),
+      ctx.db.query("users").collect(),
+      ctx.db.query("roomItems").collect()
+    ]);
+
+    const totalDocs = kitchen.length + gym.length + rooms.length + supplies.length + history.length + users.length + roomItems.length;
+    
+    return {
+      counts: {
+        kitchen: kitchen.length,
+        gym: gym.length,
+        rooms: rooms.length,
+        supplies: supplies.length,
+        history: history.length,
+        users: users.length,
+        roomItems: roomItems.length
+      },
+      health: {
+        totalDocuments: totalDocs,
+        limit: 10000,
+        usagePercentage: (totalDocs / 10000) * 100,
+        status: totalDocs > 8000 ? "CRITICAL" : totalDocs > 5000 ? "WARNING" : "OPTIMAL"
+      }
+    };
   },
 });

@@ -20,14 +20,16 @@ import { toast } from 'react-hot-toast';
 export default function Reports() {
   const [reportStatus, setReportStatus] = useState('idle');
   
+  const sessionToken = localStorage.getItem('swiss_side_session') || '';
+  
   // Data Aggregation
-  const kitchenItems = useQuery(api.items.getAll);
-  const gymItems = useQuery(api.gymItems.getAll);
-  const rooms = useQuery(api.rooms.getAll);
-  const roomItems = useQuery(api.roomItems.getAll);
-  const generalSupplies = useQuery(api.generalSupplies.getAll);
-  const kitchenHistory = useQuery(api.transactions.getHistory);
-  const procurementNeeds = useQuery(api.needs.getAll);
+  const kitchenItems = useQuery(api.items.getAll, { token: sessionToken });
+  const gymItems = useQuery(api.gymItems.getAll, { token: sessionToken });
+  const rooms = useQuery(api.rooms.getAll, { token: sessionToken });
+  const roomItems = useQuery(api.roomItems.getAll, { token: sessionToken });
+  const generalSupplies = useQuery(api.generalSupplies.getAll, { token: sessionToken });
+  const kitchenHistory = useQuery(api.transactions.getHistory, { token: sessionToken });
+  const procurementNeeds = useQuery(api.needs.getAll, { token: sessionToken });
 
   const stats = useMemo(() => {
     if (!kitchenItems || !gymItems || !rooms || !roomItems || !generalSupplies || !procurementNeeds) return null;
@@ -43,16 +45,37 @@ export default function Reports() {
       const timestamp = new Date().toLocaleString();
       const dateStr = new Date().toISOString().split('T')[0];
 
+      // Load Logo
+      let logoDataUrl = null;
+      try {
+        const response = await fetch('/logo.png');
+        const blob = await response.blob();
+        logoDataUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+      } catch (e) {
+        console.warn("Could not load logo for PDF");
+      }
+
       // Premium Header
       doc.setFillColor(163, 94, 69); // Terracotta
       doc.rect(0, 0, 210, 45, 'F');
+      
+      if (logoDataUrl) {
+        // Place logo on the left
+        doc.addImage(logoDataUrl, 'PNG', 15, 7, 30, 30);
+      }
+
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(28);
-      doc.text("SWISS SIDE ITEN", 105, 25, { align: 'center' });
+      // Shift text slightly to the right to accommodate logo
+      doc.text("SWISS SIDE ITEN", 115, 25, { align: 'center' });
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.text("PREMIUM LODGE & ATHLETE PERFORMANCE CENTER • ITEN, KENYA", 105, 33, { align: 'center' });
+      doc.text("PREMIUM LODGE & ATHLETE PERFORMANCE CENTER • ITEN, KENYA", 115, 33, { align: 'center' });
 
       // Sub-Header
       doc.setTextColor(0, 0, 0);

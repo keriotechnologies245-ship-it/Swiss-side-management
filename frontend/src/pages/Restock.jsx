@@ -6,7 +6,8 @@ import { api } from "../../convex/_generated/api";
 import { toast } from 'react-hot-toast';
 
 export default function Restock() {
-  const items = useQuery(api.items.getAll);
+  const sessionToken = localStorage.getItem('swiss_side_session') || '';
+  const items = useQuery(api.items.getAll, { token: sessionToken });
   const restockMutation = useMutation(api.transactions.restock);
   const navigate = useNavigate();
 
@@ -20,15 +21,16 @@ export default function Restock() {
   const onSubmit = async (data) => {
     try {
       await restockMutation({
+        token: sessionToken,
         itemId: data.itemId,
         quantity: parseFloat(data.quantity),
-        person: data.source || 'Manager',
+        person: data.source || localStorage.getItem('swiss_side_user') || 'Manager',
         notes: data.notes || ''
       });
       // Fast, simple redirect
       navigate('/dashboard');
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message?.replace("Uncaught Error: ", ""));
     }
   };
 
