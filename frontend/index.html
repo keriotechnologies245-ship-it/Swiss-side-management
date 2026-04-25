@@ -5,15 +5,14 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- PRODUCTION HARDENING: Strict Content Security Policy (XSS Protection) -->
-    <!-- Updated connect-src to allow Convex WebSockets (wss://) -->
+    <!-- TEMPORARILY RELAXED CSP: Restoring visibility while debugging Render deployment -->
     <meta http-equiv="Content-Security-Policy" content="
-      default-src 'self';
-      script-src 'self' 'unsafe-inline' https://*.convex.cloud;
+      default-src 'self' https://*.convex.cloud wss://*.convex.cloud;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.convex.cloud;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com;
       connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://api.resend.com;
-      img-src 'self' data: blob:;
+      img-src 'self' data: blob: https://*;
       object-src 'none';
     ">
 
