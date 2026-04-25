@@ -16,6 +16,6 @@ services:
       - key: VITE_CONVEX_URL
         sync: false
       - key: NODE_VERSION
-        value: 20.0.0
+        value: 22.12.0
 
     autoDeploy: true
