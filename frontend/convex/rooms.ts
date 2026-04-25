@@ -29,7 +29,7 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const { token, ...data } = args;
-    await checkAuth(ctx, token, "staff");
+    await checkAuth(ctx, token, "super_admin");
     const roomId = await ctx.db.insert("rooms", data);
 
     // Fetch the dynamic master template
@@ -72,7 +72,7 @@ export const remove = mutation({
     id: v.id("rooms") 
   },
   handler: async (ctx, args) => {
-    await checkAuth(ctx, args.token, "staff");
+    await checkAuth(ctx, args.token, "super_admin");
     
     // Also remove items associated with this room
     const items = await ctx.db

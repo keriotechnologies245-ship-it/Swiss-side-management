@@ -21,7 +21,7 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const { token, ...data } = args;
-    await checkAuth(ctx, token, "staff");
+    await checkAuth(ctx, token, "super_admin");
     return await ctx.db.insert("gymItems", data);
   },
 });
@@ -49,7 +49,7 @@ export const remove = mutation({
     id: v.id("gymItems") 
   },
   handler: async (ctx, args) => {
-    await checkAuth(ctx, args.token, "staff");
+    await checkAuth(ctx, args.token, "super_admin");
     await ctx.db.delete(args.id);
   },
 });
