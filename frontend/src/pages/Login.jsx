@@ -17,12 +17,12 @@ export default function Login() {
   const [newPassword, setNewPassword] = useState('');
 
   const isSystemEmpty = useQuery(api.users.isSystemEmpty);
-  const signInMutation = useMutation(api.users.signIn);
-  const initializeRootOwnership = useMutation(api.users.initializeRootOwnership);
   
-  // Reset Actions/Mutations
+  // AUTH ACTIONS
+  const signInAction = useAction(api.actions.signIn);
+  const initializeAction = useAction(api.actions.initializeSystem);
+  const finalizeResetAction = useAction(api.actions.resetPasswordWithTokenAction);
   const dispatchReset = useAction(api.resend.dispatchSecureResetLink);
-  const finalizeReset = useMutation(api.users.resetPasswordWithToken);
 
   const navigate = useNavigate();
 
@@ -34,14 +34,14 @@ export default function Login() {
 
     try {
       if (isSystemEmpty) {
-        const result = await initializeRootOwnership({ email, password });
+        const result = await initializeAction({ email, password });
         localStorage.setItem('swiss_side_session', result.token);
         localStorage.setItem('swiss_side_user', result.email);
         localStorage.setItem('swiss_side_role', result.role);
         toast.success("System initialized! Welcome, Administrator.");
         navigate('/dashboard');
       } else {
-        const result = await signInMutation({ email, password });
+        const result = await signInAction({ email, password });
         localStorage.setItem('swiss_side_session', result.token);
         localStorage.setItem('swiss_side_user', result.email);
         localStorage.setItem('swiss_side_role', result.role);
@@ -88,7 +88,7 @@ export default function Login() {
     if (newPassword.length < 8) return toast.error("New password must be at least 8 characters.");
     setLoading(true);
     try {
-      await finalizeReset({ email, token: resetToken, newPassword });
+      await finalizeResetAction({ email, token: resetToken, newPassword });
       toast.success("Password secured! You can now log in.");
       setView('login');
       setPassword('');

@@ -1,34 +1,27 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { checkAuth } from "./auth";
 
 /**
- * Paginated History Query
+ * REAL PAGINATED HISTORY: Uses Convex native cursor-based pagination
  */
 export const getHistory = query({
   args: { 
     token: v.string(), 
-    limit: v.optional(v.number()),
-    offset: v.optional(v.number())
+    paginationOpts: paginationOptsValidator 
   },
   handler: async (ctx, args) => {
     await checkAuth(ctx, args.token);
-    const limit = args.limit ?? 50;
-    const offset = args.offset ?? 0;
-    
-    // We use .collect() then slice for simple pagination at small scale
-    // In larger production, we'd use .paginate() with cursors
-    const all = await ctx.db.query("transactions").order("desc").collect();
-    return {
-      items: all.slice(offset, offset + limit),
-      total: all.length,
-      hasMore: offset + limit < all.length
-    };
+    return await ctx.db
+      .query("transactions")
+      .order("desc")
+      .paginate(args.paginationOpts);
   },
 });
 
 /**
- * Data Export: Fetch everything for CSV generation
+ * Data Export: Fetch everything for CSV generation (Super Admin Only)
  */
 export const getAllHistoryForExport = query({
   args: { token: v.string() },
@@ -60,7 +53,10 @@ export const logAdminAction = internalMutation({
     details: v.optional(v.string())
   },
   handler: async (ctx, args) => {
-    await ctx.db.insert("adminLogs", args);
+    await ctx.db.insert("adminLogs", {
+      ...args,
+      details: args.details?.slice(0, 500) // Sanitization
+    });
   },
 });
 
@@ -91,8 +87,8 @@ export const withdraw = mutation({
       type: "WITHDRAWAL",
       quantity: data.quantity,
       unit: item.unit,
-      person: user.displayName || user.email,
-      notes: data.notes
+      person: (user.displayName || user.email).slice(0, 100),
+      notes: data.notes?.slice(0, 500)
     });
   }
 });
@@ -121,8 +117,8 @@ export const restock = mutation({
       type: "RESTOCK",
       quantity: data.quantity,
       unit: item.unit,
-      person: user.displayName || user.email,
-      notes: data.notes
+      person: (user.displayName || user.email).slice(0, 100),
+      notes: data.notes?.slice(0, 500)
     });
   }
 });

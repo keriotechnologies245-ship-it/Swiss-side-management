@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { toast } from 'react-hot-toast';
 import { UserPlus, Trash2, ShieldCheck, Users, Lock, KeyRound, X, Eye, EyeOff, Pencil, Check } from 'lucide-react';
@@ -46,7 +46,7 @@ function EditableName({ currentName, onSave }) {
 
 // ── Reset Password Modal ─────────────────────────────────────────────────────
 function ResetPasswordModal({ user, adminToken, onClose }) {
-  const resetPassword = useMutation(api.users.adminResetPassword);
+  const resetPassword = useAction(api.actions.adminResetPasswordAction);
   const [newPass, setNewPass]       = useState('');
   const [confirmPass, setConfirm]   = useState('');
   const [showPass, setShowPass]     = useState(false);
@@ -153,7 +153,7 @@ export default function Settings() {
   const [resetTarget,   setResetTarget]   = useState(null);
 
   const allUsers    = useQuery(api.users.listAllUsers, isAdmin ? { adminToken } : "skip");
-  const createStaff = useMutation(api.users.createStaffAccount);
+  const createStaff = useAction(api.actions.createStaff);
   const removeUser  = useMutation(api.users.removeUser);
   const updateNameMutation = useMutation(api.users.updateDisplayName);
 
@@ -244,7 +244,6 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Staff: show contact-admin message instead of a password form */}
             {!isAdmin && (
               <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-4">
                 <KeyRound size={20} className="text-slate-400 shrink-0" />
@@ -259,8 +258,6 @@ export default function Settings() {
           </div>
         </div>
 
-
-        {/* Admin Panel — user management */}
         {isAdmin ? (
           <div className="system-card bg-white p-10 shadow-premium border border-slate-50 relative overflow-hidden xl:col-span-2">
             <div className="flex items-center gap-4 mb-8">
@@ -342,14 +339,12 @@ export default function Settings() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          {/* Reset password */}
                           <button
                             onClick={() => setResetTarget(user)}
                             className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
                           >
                             <KeyRound size={13} /> Reset PW
                           </button>
-                          {/* Remove — only for non-admins */}
                           {user.role !== 'super_admin' && (
                             <button
                               onClick={() => handleRemoveUser(user._id, label)}
@@ -367,7 +362,6 @@ export default function Settings() {
             </div>
           </div>
         ) : (
-          /* Staff view */
           <div className="system-card bg-white p-10 shadow-premium border border-slate-50 flex flex-col items-center justify-center text-center gap-6 min-h-[300px]">
             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
               <Lock size={32} />
@@ -382,7 +376,6 @@ export default function Settings() {
         )}
       </div>
 
-      {/* Reset Password Modal */}
       {resetTarget && (
         <ResetPasswordModal
           user={resetTarget}

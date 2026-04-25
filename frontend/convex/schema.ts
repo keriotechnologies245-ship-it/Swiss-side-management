@@ -71,9 +71,18 @@ export default defineSchema({
 
   adminLogs: defineTable({
     adminEmail: v.string(),
-    action: v.string(), // e.g. "CREATE_USER", "REMOVE_USER", "RESET_PASSWORD"
+    action: v.string(),
     targetEmail: v.string(),
     details: v.optional(v.string()),
+  }),
+
+  // Proactive Error Monitoring Table
+  systemErrors: defineTable({
+    userEmail: v.optional(v.string()),
+    message: v.string(),
+    stack: v.optional(v.string()),
+    url: v.string(),
+    timestamp: v.number(),
   }),
 
   needs: defineTable({

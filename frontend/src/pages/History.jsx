@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from "convex/react";
+import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Search, Download, ChevronRight, FileSpreadsheet } from 'lucide-react';
+import { Search, FileSpreadsheet, ChevronRight, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
 
@@ -10,17 +10,19 @@ export default function Transactions() {
   const userRole = localStorage.getItem('swiss_side_role') || '';
   const isAdmin = userRole === 'super_admin';
 
-  const [limit, setLimit] = useState(50);
   const [filters, setFilters] = useState({ dateRange: 'all', itemId: 'all', type: 'all', search: '' });
 
-  const historyData = useQuery(api.transactions.getHistory, { token: sessionToken, limit });
+  // PRODUCTION HARDENING: Real Cursor-Based Pagination
+  const { results, status, loadMore } = usePaginatedQuery(
+    api.transactions.getHistory,
+    { token: sessionToken },
+    { initialNumItems: 25 }
+  );
+
   const exportData = useQuery(api.transactions.getAllHistoryForExport, isAdmin ? { token: sessionToken } : "skip");
   const items = useQuery(api.items.getAll, { token: sessionToken });
 
-  const history = historyData?.items || [];
-  const hasMore = historyData?.hasMore || false;
-
-  const filteredHistory = history.filter(h => {
+  const filteredHistory = (results || []).filter(h => {
     if (!h) return false;
     const matchesItem = filters.itemId === 'all' || h.itemId === filters.itemId;
     const matchesType = filters.type === 'all' || h.type === filters.type;
@@ -59,7 +61,7 @@ export default function Transactions() {
     toast.success("Audit data exported to CSV.");
   };
 
-  if (historyData === undefined || items === undefined) return <div className="p-12 font-mono text-slate-400 uppercase tracking-widest text-xs animate-pulse text-center">Reading Audit Logs...</div>;
+  if (status === "LoadingFirstPage" || items === undefined) return <div className="p-12 font-mono text-slate-400 uppercase tracking-widest text-xs animate-pulse text-center">Reading Audit Logs...</div>;
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
@@ -167,14 +169,20 @@ export default function Transactions() {
           </table>
         </div>
         
-        {hasMore && (
+        {status === "CanLoadMore" && (
           <div className="p-6 bg-slate-50/30 border-t border-slate-50 text-center">
             <button 
-              onClick={() => setLimit(l => l + 50)}
+              onClick={() => loadMore(25)}
               className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-primary transition-colors flex items-center justify-center gap-2 mx-auto"
             >
               Load More Records <ChevronRight size={14} />
             </button>
+          </div>
+        )}
+
+        {status === "LoadingMore" && (
+          <div className="p-6 bg-slate-50/30 border-t border-slate-50 text-center flex justify-center">
+            <Loader2 className="animate-spin text-primary" size={20} />
           </div>
         )}
       </div>

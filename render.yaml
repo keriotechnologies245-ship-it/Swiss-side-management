@@ -1,7 +1,23 @@
 services:
   - type: web
-    name: swiss-side-frontend
+    name: swiss-side-management
     runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
+    
+    # PRODUCTION HARDENING: Health checks and Routing
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+    envVars:
+      - key: VITE_CONVEX_URL
+        sync: false # Must be set in Render Dashboard
+      - key: NODE_VERSION
+        value: 20.0.0
+
+    # Professional Availability
+    autoDeploy: true
+    pullRequestPreviewsEnabled: true
