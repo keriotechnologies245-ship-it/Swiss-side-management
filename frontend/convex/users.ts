@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
@@ -11,7 +11,10 @@ export const isSystemEmpty = query({
   },
 });
 
-export const getOtpForEmail = query({
+/**
+ * INTERNAL ONLY: Retrieve OTP for email (Used by system actions, not accessible to browser)
+ */
+export const getOtpForEmailInternal = internalQuery({
   args: { email: v.string() },
   handler: async (ctx, args) => {
     const user = await ctx.db
@@ -21,7 +24,6 @@ export const getOtpForEmail = query({
     return user ? { otpCode: user.otpCode } : null;
   },
 });
-
 
 /**
  * Sign In: Verify credentials and issue session token directly (no OTP required)
@@ -80,7 +82,6 @@ export const initializeRootOwnership = mutation({
       throw new Error("System is already initialized.");
     }
 
-
     // Hash the Master Password
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(args.password, salt);
@@ -100,9 +101,9 @@ export const initializeRootOwnership = mutation({
 });
 
 /**
- * Step 1 of Recovery: Generate a Secure Reset Token
+ * INTERNAL ONLY: Generate and save a reset token (Cannot be called from browser)
  */
-export const requestPasswordReset = mutation({
+export const generateResetTokenInternal = internalMutation({
   args: { email: v.string() },
   handler: async (ctx, args) => {
     const user = await ctx.db
@@ -110,20 +111,16 @@ export const requestPasswordReset = mutation({
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .unique();
 
-    if (!user || user.role !== "super_admin") {
-      // For security, don't reveal if the user exists
-      return { success: true }; 
-    }
+    if (!user || user.role !== "super_admin") return null;
 
-    // Rate limit: Block if a reset was requested in the last 60 seconds
+    // Rate limit check
     if (user.lastResetRequest && (Date.now() - user.lastResetRequest) < 60 * 1000) {
-      throw new Error("Please wait 60 seconds before requesting another reset.");
+      throw new Error("RATE_LIMIT");
     }
 
-    // Generate a secure 6-digit numeric token
     const { randomInt } = await import("crypto");
     const token = randomInt(100000, 999999).toString();
-    const expiry = Date.now() + 30 * 60 * 1000; // 30 minutes
+    const expiry = Date.now() + 30 * 60 * 1000;
 
     await ctx.db.patch(user._id, {
       resetToken: token,
@@ -131,7 +128,19 @@ export const requestPasswordReset = mutation({
       lastResetRequest: Date.now(),
     });
 
-    return { success: true }; // SECURITY: Never return the token in the response
+    return token;
+  },
+});
+
+/**
+ * Step 1 of Recovery: Initiates the reset flow (Client-facing)
+ */
+export const requestPasswordReset = mutation({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    // SECURITY: This mutation no longer generates the token. 
+    // It is just a trigger. The real logic is in the Action.
+    return { success: true };
   }
 });
 
@@ -158,7 +167,8 @@ export const resetPasswordWithToken = mutation({
       throw new Error("Reset token has expired.");
     }
 
-    // Success -> Update password and clear token - also cap length
+    if (args.newPassword.length < 8) throw new Error("Password must be at least 8 characters.");
+
     const passwordToHash = args.newPassword.slice(0, 100);
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(passwordToHash, salt);
@@ -193,6 +203,8 @@ export const createStaffAccount = mutation({
       .withIndex("by_email", (q) => q.eq("email", args.newEmail))
       .unique();
     if (existing) throw new Error("This email is already in use.");
+
+    if (args.newPassword.length < 8) throw new Error("Password must be at least 8 characters.");
 
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(args.newPassword, salt);
@@ -248,10 +260,8 @@ export const removeUser = mutation({
   },
 });
 
-
 /**
- * Verify session token and return user info (READ-ONLY - queries cannot mutate)
- * Convex re-runs this query reactively — no need for a heartbeat arg.
+ * Verify session token and return user info
  */
 export const verifySession = query({
   args: { 
@@ -279,7 +289,6 @@ export const updateDisplayName = mutation({
   },
 });
 
-
 /**
  * Admin-Only: Reset any user's password
  */
@@ -291,6 +300,7 @@ export const adminResetPassword = mutation({
   },
   handler: async (ctx, args) => {
     await checkAuth(ctx, args.adminToken, "super_admin");
+    if (args.newPassword.length < 8) throw new Error("Password must be at least 8 characters.");
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(args.newPassword, salt);
     await ctx.db.patch(args.userId, {
