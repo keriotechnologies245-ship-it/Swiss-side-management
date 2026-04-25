@@ -15,12 +15,11 @@ export const withdraw = mutation({
     token: v.string(),
     itemId: v.union(v.id("items"), v.id("generalSupplies")),
     quantity: v.number(),
-    person: v.string(),
     notes: v.optional(v.string())
   },
   handler: async (ctx, args) => {
     const { token, ...data } = args;
-    await checkAuth(ctx, token, "staff");
+    const user = await checkAuth(ctx, token, "staff");
 
     const item = await ctx.db.get(data.itemId);
     if (!item) throw new Error("Item not found");
@@ -40,7 +39,7 @@ export const withdraw = mutation({
       type: "WITHDRAWAL",
       quantity: data.quantity,
       unit: item.unit,
-      person: data.person,
+      person: user.displayName || user.email,
       notes: data.notes
     });
   }

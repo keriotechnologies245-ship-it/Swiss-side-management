@@ -16,8 +16,7 @@ export default function Withdraw() {
 
   const { register, handleSubmit, watch } = useForm({
     defaultValues: {
-      itemId: preSelectedId || '',
-      staffName: localStorage.getItem('swiss_side_user') || ''
+      itemId: preSelectedId || ''
     }
   });
   const selectedItemId = watch('itemId');
@@ -32,7 +31,6 @@ export default function Withdraw() {
         token: sessionToken,
         itemId: data.itemId,
         quantity: parseFloat(data.quantity),
-        person: data.staffName,
         notes: data.notes || ''
       });
       // Fast, simple redirect
@@ -101,17 +99,6 @@ export default function Withdraw() {
               )}
             </div>
 
-            <div>
-              <label className="block text-xs-label text-slate-400 uppercase mb-3 flex items-center gap-2">
-                <User size={14} /> Personnel
-              </label>
-              <input 
-                type="text" 
-                {...register('staffName', { required: true })} 
-                className="input-field h-14 bg-slate-50/50 font-bold uppercase tracking-widest"
-                placeholder="STAFF NAME"
-              />
-            </div>
           </div>
 
           <div>

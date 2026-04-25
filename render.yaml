@@ -5,8 +5,3 @@ services:
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
-    envVars:
-      - key: VITE_CONVEX_URL
-        value: https://brainy-barracuda-807.convex.cloud
-      - key: VITE_CONVEX_SITE_URL
-        value: https://brainy-barracuda-807.convex.site

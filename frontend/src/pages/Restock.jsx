@@ -24,7 +24,6 @@ export default function Restock() {
         token: sessionToken,
         itemId: data.itemId,
         quantity: parseFloat(data.quantity),
-        person: data.source || localStorage.getItem('swiss_side_user') || 'Manager',
         notes: data.notes || ''
       });
       // Fast, simple redirect

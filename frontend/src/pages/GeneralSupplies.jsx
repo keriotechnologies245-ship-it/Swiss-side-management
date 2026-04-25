@@ -14,7 +14,6 @@ function ActionModal({ item, mode, onClose }) {
   const restockMutation  = useMutation(api.transactions.restock);
 
   const [amount, setAmount]   = useState('');
-  const [person, setPerson]   = useState(currentUser());
   const [reason, setReason]   = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +24,6 @@ function ActionModal({ item, mode, onClose }) {
     e.preventDefault();
     const qty = parseFloat(amount);
     if (!qty || qty <= 0) return toast.error('Enter a valid amount.');
-    if (!person.trim())  return toast.error('Enter your name.');
     if (!reason.trim())  return toast.error('Enter a reason.');
     if (isWithdraw && qty > item.quantity)
       return toast.error(`Only ${item.quantity} ${item.unit} available.`);
@@ -37,7 +35,6 @@ function ActionModal({ item, mode, onClose }) {
         token:    sessionToken(),
         itemId:   item._id,
         quantity: qty,
-        person:   person.trim(),
         notes:    reason.trim(),
       });
       toast.success(isWithdraw ? `−${qty} ${item.unit} withdrawn` : `+${qty} ${item.unit} restocked`);
@@ -99,16 +96,6 @@ function ActionModal({ item, mode, onClose }) {
             )}
           </div>
 
-          <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Your Name</label>
-            <input
-              type="text"
-              className="input-field"
-              placeholder="e.g. Cynthia"
-              value={person}
-              onChange={e => setPerson(e.target.value)}
-            />
-          </div>
 
           <div>
             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">

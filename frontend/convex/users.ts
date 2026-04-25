@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { checkAuth } from "./auth";
 
@@ -40,8 +41,8 @@ export const signIn = mutation({
       throw new Error(attempts >= 5 ? "Account locked for 15 minutes." : "Invalid credentials");
     }
 
-    // 3. Issue session token directly — no OTP needed for internal staff tool
-    const token = Math.random().toString(36).substring(7) + Date.now() + Math.random().toString(36).substring(7);
+    // 3. Issue session token directly
+    const token = randomBytes(32).toString("hex");
     const sessionExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
     await ctx.db.patch(user._id, {
@@ -78,7 +79,7 @@ export const initializeRootOwnership = mutation({
       email: args.email,
       password: hashedPassword,
       role: "super_admin",
-      token: Math.random().toString(36).substring(7) + Date.now(),
+      token: randomBytes(32).toString("hex"),
       tokenExpiry: Date.now() + 24 * 60 * 60 * 1000,
       failedAttempts: 0
     });
@@ -110,7 +111,8 @@ export const requestPasswordReset = mutation({
     }
 
     // Generate a secure 6-digit numeric token
-    const token = Math.floor(100000 + Math.random() * 900000).toString();
+    const { randomInt } = await import("crypto");
+    const token = randomInt(100000, 999999).toString();
     const expiry = Date.now() + 30 * 60 * 1000; // 30 minutes
 
     await ctx.db.patch(user._id, {

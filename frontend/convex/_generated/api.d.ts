@@ -9,8 +9,6 @@
  */
 
 import type * as auth from "../auth.js";
-import type * as cleanup from "../cleanup.js";
-import type * as debug from "../debug.js";
 import type * as generalSupplies from "../generalSupplies.js";
 import type * as gymItems from "../gymItems.js";
 import type * as items from "../items.js";
@@ -30,8 +28,6 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
-  cleanup: typeof cleanup;
-  debug: typeof debug;
   generalSupplies: typeof generalSupplies;
   gymItems: typeof gymItems;
   items: typeof items;
