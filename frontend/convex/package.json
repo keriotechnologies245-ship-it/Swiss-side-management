@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "resend": "^6.1.3",
-    "bcryptjs": "^2.4.3"
-  }
-}
