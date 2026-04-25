@@ -6,7 +6,7 @@ export default defineSchema({
     email: v.string(),
     password: v.string(),
     role: v.union(v.literal("super_admin"), v.literal("staff")),
-    displayName: v.optional(v.string()),       // Human-readable name set by admin
+    displayName: v.optional(v.string()),
     token: v.optional(v.string()),
     tokenExpiry: v.optional(v.number()),
     failedAttempts: v.optional(v.number()),
@@ -33,17 +33,17 @@ export default defineSchema({
     name: v.string(),
     condition: v.union(v.literal("Excellent"), v.literal("Good"), v.literal("Maintenance"), v.literal("Broken")),
     quantity: v.number(),
-    lastChecked: v.optional(v.string()), // Date string
+    lastChecked: v.optional(v.string()),
     notes: v.optional(v.string()),
   })
   .index("by_name", ["name"]),
 
   rooms: defineTable({
-    name: v.string(), // e.g. "Room 101", "Tent 1"
-    type: v.string(), // e.g. "Standard", "Deluxe", "Family"
+    name: v.string(),
+    type: v.string(),
     status: v.union(v.literal("Ready"), v.literal("Occupied"), v.literal("Cleaning"), v.literal("Maintenance")),
     notes: v.optional(v.string()),
-    needs: v.optional(v.string()), // Added for "What is needed" notes
+    needs: v.optional(v.string()),
   })
   .index("by_name", ["name"]),
 
@@ -57,27 +57,6 @@ export default defineSchema({
   .index("by_roomId", ["roomId"])
   .index("by_itemName", ["itemName"]),
 
-  gymTransactions: defineTable({
-    itemId: v.id("gymItems"),
-    itemName: v.string(),
-    type: v.union(v.literal("MAINTENANCE"), v.literal("REPLACEMENT"), v.literal("NEW_ASSET")),
-    quantity: v.number(),
-    person: v.string(),
-    notes: v.optional(v.string()),
-  })
-  .index("by_itemId", ["itemId"]),
-
-  roomTransactions: defineTable({
-    roomId: v.id("rooms"),
-    roomName: v.string(),
-    itemName: v.string(),
-    type: v.union(v.literal("REPLACEMENT"), v.literal("REPAIR"), v.literal("CLEANING_SUPPLY")),
-    quantity: v.number(),
-    person: v.string(),
-    notes: v.optional(v.string()),
-  })
-  .index("by_roomId", ["roomId"]),
-
   transactions: defineTable({
     itemId: v.union(v.id("items"), v.id("generalSupplies")),
     itemName: v.string(),
@@ -90,9 +69,16 @@ export default defineSchema({
   .index("by_itemId", ["itemId"])
   .index("by_type", ["type"]),
 
+  adminLogs: defineTable({
+    adminEmail: v.string(),
+    action: v.string(), // e.g. "CREATE_USER", "REMOVE_USER", "RESET_PASSWORD"
+    targetEmail: v.string(),
+    details: v.optional(v.string()),
+  }),
+
   needs: defineTable({
     department: v.union(v.literal("Kitchen"), v.literal("Gym"), v.literal("Rooms"), v.literal("General")),
-    roomId: v.optional(v.id("rooms")), // Link directly to a room if department is "Rooms"
+    roomId: v.optional(v.id("rooms")),
     item: v.string(),
     quantity: v.optional(v.string()),
     status: v.union(v.literal("Pending"), v.literal("Ordered"), v.literal("Fulfilled")),
@@ -102,11 +88,6 @@ export default defineSchema({
   })
   .index("by_department", ["department"])
   .index("by_roomId", ["roomId"]),
-
-  roomTemplates: defineTable({
-    itemName: v.string(),
-    quantity: v.number(),
-  }),
 
   generalSupplies: defineTable({
     name: v.string(),

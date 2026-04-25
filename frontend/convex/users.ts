@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { checkAuth } from "./auth";
+import { internal } from "./_generated/api";
 
 export const isSystemEmpty = query({
   handler: async (ctx) => {
@@ -12,7 +13,7 @@ export const isSystemEmpty = query({
 });
 
 /**
- * INTERNAL ONLY: Retrieve OTP for email (Used by system actions, not accessible to browser)
+ * INTERNAL ONLY: Retrieve OTP for email
  */
 export const getOtpForEmailInternal = internalQuery({
   args: { email: v.string() },
@@ -26,7 +27,7 @@ export const getOtpForEmailInternal = internalQuery({
 });
 
 /**
- * Sign In: Verify credentials and issue session token directly (no OTP required)
+ * Sign In: Verify credentials and issue session token
  */
 export const signIn = mutation({
   args: { email: v.string(), password: v.string() },
@@ -38,12 +39,10 @@ export const signIn = mutation({
 
     if (!user) throw new Error("Invalid credentials");
 
-    // 1. Check lockout
     if (user.lockUntil && user.lockUntil > Date.now()) {
       throw new Error(`Account locked. Try again in ${Math.ceil((user.lockUntil - Date.now()) / 60000)}m.`);
     }
 
-    // 2. Verify Password - Cap length to prevent bcrypt DoS
     const passwordToCheck = args.password.slice(0, 100);
     const isPasswordValid = bcrypt.compareSync(passwordToCheck, user.password);
     if (!isPasswordValid) {
@@ -53,9 +52,8 @@ export const signIn = mutation({
       throw new Error(attempts >= 5 ? "Account locked for 15 minutes." : "Invalid credentials");
     }
 
-    // 3. Issue session token directly
     const token = randomBytes(32).toString("hex");
-    const sessionExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    const sessionExpiry = Date.now() + 24 * 60 * 60 * 1000;
 
     await ctx.db.patch(user._id, {
       token,
@@ -69,20 +67,14 @@ export const signIn = mutation({
 });
 
 /**
- * Initial Zero-User Setup (Root Ownership Version)
+ * Initial Zero-User Setup
  */
 export const initializeRootOwnership = mutation({
-  args: { 
-    email: v.string(), 
-    password: v.string(),
-  },
+  args: { email: v.string(), password: v.string() },
   handler: async (ctx, args) => {
     const users = await ctx.db.query("users").collect();
-    if (users.length > 0) {
-      throw new Error("System is already initialized.");
-    }
+    if (users.length > 0) throw new Error("System is already initialized.");
 
-    // Hash the Master Password
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(args.password, salt);
 
@@ -101,7 +93,7 @@ export const initializeRootOwnership = mutation({
 });
 
 /**
- * INTERNAL ONLY: Generate and save a reset token (Cannot be called from browser)
+ * INTERNAL ONLY: Generate and save a reset token
  */
 export const generateResetTokenInternal = internalMutation({
   args: { email: v.string() },
@@ -113,7 +105,6 @@ export const generateResetTokenInternal = internalMutation({
 
     if (!user || user.role !== "super_admin") return null;
 
-    // Rate limit check
     if (user.lastResetRequest && (Date.now() - user.lastResetRequest) < 60 * 1000) {
       throw new Error("RATE_LIMIT");
     }
@@ -133,40 +124,18 @@ export const generateResetTokenInternal = internalMutation({
 });
 
 /**
- * Step 1 of Recovery: Initiates the reset flow (Client-facing)
- */
-export const requestPasswordReset = mutation({
-  args: { email: v.string() },
-  handler: async (ctx, args) => {
-    // SECURITY: This mutation no longer generates the token. 
-    // It is just a trigger. The real logic is in the Action.
-    return { success: true };
-  }
-});
-
-/**
  * Step 2 of Recovery: Reset Password with a Valid Token
  */
 export const resetPasswordWithToken = mutation({
-  args: {
-    email: v.string(),
-    token: v.string(),
-    newPassword: v.string()
-  },
+  args: { email: v.string(), token: v.string(), newPassword: v.string() },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .unique();
 
-    if (!user || user.resetToken !== args.token) {
-      throw new Error("Invalid or expired reset token.");
-    }
-
-    if (user.resetTokenExpiry && user.resetTokenExpiry < Date.now()) {
-      throw new Error("Reset token has expired.");
-    }
-
+    if (!user || user.resetToken !== args.token) throw new Error("Invalid or expired reset token.");
+    if (user.resetTokenExpiry && user.resetTokenExpiry < Date.now()) throw new Error("Reset token has expired.");
     if (args.newPassword.length < 8) throw new Error("Password must be at least 8 characters.");
 
     const passwordToHash = args.newPassword.slice(0, 100);
@@ -196,7 +165,7 @@ export const createStaffAccount = mutation({
     displayName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await checkAuth(ctx, args.adminToken, "super_admin");
+    const admin = await checkAuth(ctx, args.adminToken, "super_admin");
 
     const existing = await ctx.db
       .query("users")
@@ -214,6 +183,14 @@ export const createStaffAccount = mutation({
       password: hashedPassword,
       role: "staff",
       displayName: args.displayName || undefined,
+    });
+
+    // Audit Log
+    await ctx.runMutation(internal.transactions.logAdminAction, {
+      adminEmail: admin.email,
+      action: "CREATE_STAFF",
+      targetEmail: args.newEmail,
+      details: `Display name: ${args.displayName || "Not set"}`
     });
 
     return { success: true };
@@ -241,22 +218,26 @@ export const listAllUsers = query({
  * Admin-Only: Remove a user
  */
 export const removeUser = mutation({
-  args: { 
-    adminToken: v.string(),
-    userId: v.id("users")
-  },
+  args: { adminToken: v.string(), userId: v.id("users") },
   handler: async (ctx, args) => {
-    await checkAuth(ctx, args.adminToken, "super_admin");
+    const admin = await checkAuth(ctx, args.adminToken, "super_admin");
 
     const userToRemove = await ctx.db.get(args.userId);
-    if (userToRemove?.role === "super_admin") {
+    if (!userToRemove) throw new Error("User not found");
+
+    if (userToRemove.role === "super_admin") {
       const superAdmins = await ctx.db.query("users").filter(q => q.eq(q.field("role"), "super_admin")).collect();
-      if (superAdmins.length <= 1) {
-        throw new Error("Cannot remove the last Super Admin account.");
-      }
+      if (superAdmins.length <= 1) throw new Error("Cannot remove the last Super Admin account.");
     }
 
     await ctx.db.delete(args.userId);
+
+    // Audit Log
+    await ctx.runMutation(internal.transactions.logAdminAction, {
+      adminEmail: admin.email,
+      action: "REMOVE_USER",
+      targetEmail: userToRemove.email,
+    });
   },
 });
 
@@ -264,9 +245,7 @@ export const removeUser = mutation({
  * Verify session token and return user info
  */
 export const verifySession = query({
-  args: { 
-    token: v.string(),
-  },
+  args: { token: v.string() },
   handler: async (ctx, args) => {
     try {
       const user = await checkAuth(ctx, args.token);
@@ -278,7 +257,7 @@ export const verifySession = query({
 });
 
 /**
- * Any logged-in user can update their own display name
+ * Update display name
  */
 export const updateDisplayName = mutation({
   args: { token: v.string(), displayName: v.string() },
@@ -299,23 +278,35 @@ export const adminResetPassword = mutation({
     newPassword: v.string(),
   },
   handler: async (ctx, args) => {
-    await checkAuth(ctx, args.adminToken, "super_admin");
+    const admin = await checkAuth(ctx, args.adminToken, "super_admin");
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
     if (args.newPassword.length < 8) throw new Error("Password must be at least 8 characters.");
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(args.newPassword, salt);
+    
     await ctx.db.patch(args.userId, {
       password: hashedPassword,
       failedAttempts: 0,
       lockUntil: undefined,
-      token: undefined,      // Force re-login with new password
+      token: undefined,
       tokenExpiry: undefined,
     });
+
+    // Audit Log
+    await ctx.runMutation(internal.transactions.logAdminAction, {
+      adminEmail: admin.email,
+      action: "ADMIN_RESET_PASSWORD",
+      targetEmail: user.email,
+    });
+
     return { success: true };
   },
 });
 
 /**
- * Secure Logout: Destroy the session token on the server
+ * Secure Logout
  */
 export const logout = mutation({
   args: { token: v.string() },
@@ -336,7 +327,7 @@ export const logout = mutation({
 });
 
 /**
- * Admin-Only: Get comprehensive system metrics for health monitoring
+ * Get comprehensive system metrics
  */
 export const getSystemMetrics = query({
   args: { adminToken: v.string() },

@@ -46,8 +46,17 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const { token, ...data } = args;
     await checkAuth(ctx, token, "staff");
+
+    // Input sanitization and length limits
+    const sanitizedItem = data.item.trim().slice(0, 100);
+    const sanitizedNotes = data.notes?.trim().slice(0, 500);
+    const sanitizedRequestor = data.requestor.trim().slice(0, 100);
+
     return await ctx.db.insert("needs", {
       ...data,
+      item: sanitizedItem,
+      notes: sanitizedNotes,
+      requestor: sanitizedRequestor,
       status: "Pending",
     });
   },

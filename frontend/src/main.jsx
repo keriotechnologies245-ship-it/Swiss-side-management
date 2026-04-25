@@ -6,7 +6,13 @@ import './index.css'
 import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL || "http://localhost:3210");
+// Production Pre-flight Check
+const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
+if (!CONVEX_URL && import.meta.env.PROD) {
+  console.error("❌ CRITICAL: VITE_CONVEX_URL is missing in production environment!");
+}
+
+const convex = new ConvexReactClient(CONVEX_URL || "http://localhost:3210");
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

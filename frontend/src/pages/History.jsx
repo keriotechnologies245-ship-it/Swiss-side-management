@@ -1,17 +1,26 @@
 import { useState } from 'react';
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Download, ChevronRight, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'react-hot-toast';
 
 export default function Transactions() {
   const sessionToken = localStorage.getItem('swiss_side_session') || '';
-  const history = useQuery(api.transactions.getHistory, { token: sessionToken });
-  const items = useQuery(api.items.getAll, { token: sessionToken });
+  const userRole = localStorage.getItem('swiss_side_role') || '';
+  const isAdmin = userRole === 'super_admin';
 
+  const [limit, setLimit] = useState(50);
   const [filters, setFilters] = useState({ dateRange: 'all', itemId: 'all', type: 'all', search: '' });
 
-  const filteredHistory = (history || []).filter(h => {
+  const historyData = useQuery(api.transactions.getHistory, { token: sessionToken, limit });
+  const exportData = useQuery(api.transactions.getAllHistoryForExport, isAdmin ? { token: sessionToken } : "skip");
+  const items = useQuery(api.items.getAll, { token: sessionToken });
+
+  const history = historyData?.items || [];
+  const hasMore = historyData?.hasMore || false;
+
+  const filteredHistory = history.filter(h => {
     if (!h) return false;
     const matchesItem = filters.itemId === 'all' || h.itemId === filters.itemId;
     const matchesType = filters.type === 'all' || h.type === filters.type;
@@ -23,7 +32,34 @@ export default function Transactions() {
     return matchesItem && matchesType && matchesSearch;
   });
 
-  if (history === undefined || items === undefined) return <div className="p-12 font-mono text-slate-400 uppercase tracking-widest text-xs animate-pulse text-center">Reading Audit Logs...</div>;
+  const handleExportCSV = () => {
+    if (!exportData || exportData.length === 0) return toast.error("No data available to export.");
+    
+    const headers = ["Timestamp", "Item Name", "Action", "Quantity", "Unit", "Personnel", "Notes"];
+    const rows = exportData.map(h => [
+      format(new Date(h._creationTime), 'yyyy-MM-dd HH:mm:ss'),
+      h.itemName,
+      h.type,
+      h.quantity,
+      h.unit,
+      h.person,
+      h.notes || ""
+    ]);
+
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `swiss_side_audit_export_${format(new Date(), 'yyyyMMdd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Audit data exported to CSV.");
+  };
+
+  if (historyData === undefined || items === undefined) return <div className="p-12 font-mono text-slate-400 uppercase tracking-widest text-xs animate-pulse text-center">Reading Audit Logs...</div>;
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
@@ -32,9 +68,16 @@ export default function Transactions() {
           <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">Operational Audit Logs</h1>
           <p className="text-slate-500 font-medium max-w-2xl">A high-fidelity trail of all facility movements and personnel actions.</p>
         </div>
+        {isAdmin && (
+          <button 
+            onClick={handleExportCSV}
+            className="btn-primary rounded-2xl flex items-center gap-2 h-14 px-8 text-[10px] font-black uppercase tracking-widest"
+          >
+            <FileSpreadsheet size={18} /> Export to CSV
+          </button>
+        )}
       </div>
 
-      {/* Filter Bar */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-center bg-white p-6 rounded-[32px] shadow-sm border border-slate-100">
         <div className="lg:col-span-2 relative">
             <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -67,7 +110,6 @@ export default function Transactions() {
         </select>
       </div>
 
-      {/* History Table */}
       <div className="system-card overflow-hidden bg-white shadow-premium border border-slate-50">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -124,6 +166,17 @@ export default function Transactions() {
             </tbody>
           </table>
         </div>
+        
+        {hasMore && (
+          <div className="p-6 bg-slate-50/30 border-t border-slate-50 text-center">
+            <button 
+              onClick={() => setLimit(l => l + 50)}
+              className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-primary transition-colors flex items-center justify-center gap-2 mx-auto"
+            >
+              Load More Records <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
