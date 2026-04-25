@@ -7,6 +7,6 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_CONVEX_URL
-        value: https://usable-ant-895.convex.cloud
+        value: https://brainy-barracuda-807.convex.cloud
       - key: VITE_CONVEX_SITE_URL
-        value: https://usable-ant-895.convex.site
+        value: https://brainy-barracuda-807.convex.site
