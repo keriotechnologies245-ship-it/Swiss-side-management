@@ -20,6 +20,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) return toast.error("Please fill in all fields.");
+    if (password.length < 8) return toast.error("Password must be at least 8 characters.");
     setLoading(true);
 
     try {
@@ -171,9 +172,20 @@ export default function Login() {
           </form>
         </div>
 
-        <p className="text-center text-[10px] text-slate-300 font-black uppercase tracking-widest mt-8">
-          🔒 Encrypted Session · AES-256 Protocol
-        </p>
+        <div className="mt-8 flex items-center justify-center gap-4 text-slate-300">
+          <div className="flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+            <span className="text-[9px] font-black uppercase tracking-widest">SSL Secure</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+            <span className="text-[9px] font-black uppercase tracking-widest">Bcrypt Hashed</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+            <span className="text-[9px] font-black uppercase tracking-widest">Server Managed</span>
+          </div>
+        </div>
       </div>
     </div>
   );

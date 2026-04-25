@@ -55,7 +55,7 @@ function ResetPasswordModal({ user, adminToken, onClose }) {
   const handleReset = async (e) => {
     e.preventDefault();
     if (!newPass) return toast.error('Enter a new password.');
-    if (newPass.length < 6) return toast.error('Password must be at least 6 characters.');
+    if (newPass.length < 8) return toast.error('Password must be at least 8 characters.');
     if (newPass !== confirmPass) return toast.error('Passwords do not match.');
     setLoading(true);
     try {
@@ -100,7 +100,7 @@ function ResetPasswordModal({ user, adminToken, onClose }) {
               <input
                 type={showPass ? 'text' : 'password'}
                 className="input-field pr-12"
-                placeholder="Min. 6 characters"
+                placeholder="Min. 8 characters"
                 value={newPass}
                 onChange={e => setNewPass(e.target.value)}
                 autoComplete="new-password"
@@ -170,6 +170,7 @@ export default function Settings() {
   const handleCreateStaff = async (e) => {
     e.preventDefault();
     if (!newStaffEmail || !newStaffPass) return toast.error("Email and password are required.");
+    if (newStaffPass.length < 8) return toast.error("Password must be at least 8 characters.");
     setAdding(true);
     try {
       await createStaff({

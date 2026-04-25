@@ -347,9 +347,9 @@ export const getSystemMetrics = query({
       },
       health: {
         totalDocuments: totalDocs,
-        limit: 10000,
-        usagePercentage: (totalDocs / 10000) * 100,
-        status: totalDocs > 9000 ? "CRITICAL" : totalDocs > 7000 ? "WARNING" : "OPTIMAL"
+        limit: 100000,
+        usagePercentage: (totalDocs / 100000) * 100,
+        status: totalDocs > 80000 ? "CRITICAL" : totalDocs > 50000 ? "SCALING REQUIRED" : "OPTIMAL"
       }
     };
   },

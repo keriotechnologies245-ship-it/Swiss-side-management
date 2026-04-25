@@ -14,7 +14,7 @@ export const sendOtpEmail = action({
     if (!userInfo || !userInfo.otpCode) throw new Error("No active OTP found.");
 
     const { data, error } = await resend.emails.send({
-      from: "Swiss Side Security <onboarding@resend.dev>",
+      from: `Swiss Side Security <${process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"}>`,
       to: [args.email],
       subject: `Access Code: ${userInfo.otpCode}`,
       html: `
@@ -48,9 +48,7 @@ export const dispatchSecureResetLink = action({
     
     const resend = new Resend(resendApiKey);
 
-    // We use onboarding@resend.dev because it's guaranteed to work on free accounts
-    const { error } = await resend.emails.send({
-      from: "Swiss Side Security <onboarding@resend.dev>",
+      from: `Swiss Side Security <${process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"}>`,
       to: [args.email],
       subject: "Action Required: Reset Your Swiss Side Password",
       html: `
