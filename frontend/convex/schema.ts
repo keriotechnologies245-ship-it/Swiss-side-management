@@ -15,6 +15,7 @@ export default defineSchema({
     otpExpiry: v.optional(v.number()),
     resetToken: v.optional(v.string()),
     resetTokenExpiry: v.optional(v.number()),
+    lastResetRequest: v.optional(v.number()),
   })
   .index("by_email", ["email"])
   .index("by_token", ["token"])

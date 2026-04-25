@@ -13,7 +13,7 @@ export const sendOtpEmail = action({
     const userInfo = await ctx.runQuery(api.users.getOtpForEmail, { email: args.email });
     if (!userInfo || !userInfo.otpCode) throw new Error("No active OTP found.");
 
-    const { data, error } = await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: `Swiss Side Security <${process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"}>`,
       to: [args.email],
       subject: `Access Code: ${userInfo.otpCode}`,
@@ -48,6 +48,7 @@ export const dispatchSecureResetLink = action({
     
     const resend = new Resend(resendApiKey);
 
+    const { error } = await resend.emails.send({
       from: `Swiss Side Security <${process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"}>`,
       to: [args.email],
       subject: "Action Required: Reset Your Swiss Side Password",

@@ -47,4 +47,4 @@ The system is configured for zero-downtime deployment via **Render** using the i
 - **Audit Trail:** Every transaction is tied to a verified user identity.
 
 ---
-*Developed by Roy [Your Surname]*
+*Developed by Roy Chela*

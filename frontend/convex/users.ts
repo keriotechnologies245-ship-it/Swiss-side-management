@@ -11,6 +11,16 @@ export const isSystemEmpty = query({
   },
 });
 
+export const getOtpForEmail = query({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .unique();
+    return user ? { otpCode: user.otpCode } : null;
+  },
+});
 
 
 /**
