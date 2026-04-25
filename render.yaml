@@ -3,10 +3,10 @@ services:
     name: swiss-side-frontend
     runtime: static
     rootDir: frontend
-    buildCommand: npm install && npm run build
+    # BUILD FIX: Generate Convex files before running Vite build
+    buildCommand: npm install && npx convex dev --local --run "npm run build"
     staticPublishPath: dist
     
-    # Static Site Routing for SPA
     routes:
       - type: rewrite
         source: /*
