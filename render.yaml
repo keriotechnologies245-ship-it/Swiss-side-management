@@ -1,12 +1,12 @@
 services:
   - type: web
-    name: swiss-side-management
+    name: swiss-side-frontend
     runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     
-    # PRODUCTION HARDENING: Health checks and Routing
+    # Static Site Routing for SPA
     routes:
       - type: rewrite
         source: /*
@@ -14,10 +14,8 @@ services:
 
     envVars:
       - key: VITE_CONVEX_URL
-        sync: false # Must be set in Render Dashboard
+        sync: false
       - key: NODE_VERSION
         value: 20.0.0
 
-    # Professional Availability
     autoDeploy: true
-    pullRequestPreviewsEnabled: true
