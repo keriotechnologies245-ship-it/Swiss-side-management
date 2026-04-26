@@ -27,7 +27,8 @@ export default defineSchema({
     quantity: v.number(),
     reorderLevel: v.number(),
   })
-  .index("by_name", ["name"]),
+  .index("by_name", ["name"])
+  .searchIndex("search_name", { searchField: "name" }),
 
   gymItems: defineTable({
     name: v.string(),
@@ -36,7 +37,8 @@ export default defineSchema({
     lastChecked: v.optional(v.string()),
     notes: v.optional(v.string()),
   })
-  .index("by_name", ["name"]),
+  .index("by_name", ["name"])
+  .searchIndex("search_name", { searchField: "name" }),
 
   rooms: defineTable({
     name: v.string(),
@@ -45,7 +47,8 @@ export default defineSchema({
     notes: v.optional(v.string()),
     needs: v.optional(v.string()),
   })
-  .index("by_name", ["name"]),
+  .index("by_name", ["name"])
+  .searchIndex("search_name", { searchField: "name" }),
 
   roomItems: defineTable({
     roomId: v.id("rooms"),
@@ -105,5 +108,6 @@ export default defineSchema({
     reorderLevel: v.number(),
     category: v.union(v.literal("Cleaning"), v.literal("Toiletries"), v.literal("Office"), v.literal("Other")),
     notes: v.optional(v.string()),
-  }),
+  })
+  .searchIndex("search_name", { searchField: "name" }),
 });

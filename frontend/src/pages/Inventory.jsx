@@ -267,7 +267,8 @@ function ItemFormModal({ item, onClose }) {
 
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function Inventory() {
-  const items      = useQuery(api.items.getAll, { token: sessionToken() });
+  const token = localStorage.getItem('swiss_side_session') || '';
+  const items = useQuery(api.items.getAll, { token });
   const removeItem = useMutation(api.items.remove);
 
   const [search,      setSearch]      = useState('');

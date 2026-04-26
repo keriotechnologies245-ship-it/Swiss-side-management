@@ -290,7 +290,8 @@ function ItemFormModal({ item, onClose }) {
 
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function GeneralSupplies() {
-  const items      = useQuery(api.generalSupplies.getAll, { token: sessionToken() });
+  const sessionToken = localStorage.getItem('swiss_side_session') || '';
+  const items = useQuery(api.generalSupplies.getAll, { token: sessionToken });
   const removeItem = useMutation(api.generalSupplies.remove);
 
   const [search,        setSearch]        = useState('');

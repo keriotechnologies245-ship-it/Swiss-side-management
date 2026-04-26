@@ -8,36 +8,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
   
   const sessionToken = localStorage.getItem('swiss_side_session') || "";
-
-  // Department Data
-  const kitchenItems    = useQuery(api.items.getAll, { token: sessionToken });
-  const gymItems        = useQuery(api.gymItems.getAll, { token: sessionToken });
-  const rooms           = useQuery(api.rooms.getAll, { token: sessionToken });
-  const generalSupplies = useQuery(api.generalSupplies.getAll, { token: sessionToken });
-
-  const stats = useMemo(() => {
-    if (!kitchenItems || !gymItems || !rooms || !generalSupplies) return null;
-
-    return {
-      kitchen: {
-        total: kitchenItems.length,
-        lowStock: kitchenItems.filter(i => i.quantity <= i.reorderLevel).length,
-      },
-      gym: {
-        total: gymItems.length,
-        maintenance: gymItems.filter(i => i.condition === 'Maintenance' || i.condition === 'Broken').length,
-      },
-      rooms: {
-        total: rooms.length,
-        ready: rooms.filter(r => r.status === 'Ready').length,
-        maintenance: rooms.filter(r => r.status === 'Maintenance').length,
-      },
-      supplies: {
-        total: generalSupplies.length,
-        lowStock: generalSupplies.filter(s => s.quantity <= s.reorderLevel).length,
-      }
-    };
-  }, [kitchenItems, gymItems, rooms, generalSupplies]);
+  
+  // Consolidated stats query (Efficiency Patch)
+  const stats = useQuery(api.dashboard.getStats, { token: sessionToken });
 
   if (!stats) return (
     <div className="flex items-center justify-center h-full">
