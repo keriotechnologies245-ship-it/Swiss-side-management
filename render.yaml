@@ -4,7 +4,7 @@ services:
     runtime: static
     rootDir: frontend
     # BUILD FIX: Generate Convex files before running Vite build
-    buildCommand: npm install && npx convex codegen && npm run build
+    buildCommand: npm install && npm run build
     staticPublishPath: dist
     
     routes:
